@@ -22,11 +22,11 @@ package com.github.javaparser.ast.body;
 
 import static com.github.javaparser.ast.Modifier.Keyword.PUBLIC;
 import static com.github.javaparser.utils.Utils.assertNotNull;
-
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.*;
 import com.github.javaparser.ast.Modifier.Keyword;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.nodeTypes.*;
 import com.github.javaparser.ast.nodeTypes.modifiers.*;
@@ -57,133 +57,48 @@ import java.util.function.Consumer;
  *
  * @author Julio Vilmar Gesser
  */
-public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
-        implements NodeWithType<MethodDeclaration, Type>,
-                NodeWithOptionalBlockStmt<MethodDeclaration>,
-                NodeWithJavadoc<MethodDeclaration>,
-                NodeWithDeclaration,
-                NodeWithSimpleName<MethodDeclaration>,
-                NodeWithParameters<MethodDeclaration>,
-                NodeWithThrownExceptions<MethodDeclaration>,
-                NodeWithTypeParameters<MethodDeclaration>,
-                NodeWithAccessModifiers<MethodDeclaration>,
-                NodeWithAbstractModifier<MethodDeclaration>,
-                NodeWithStaticModifier<MethodDeclaration>,
-                NodeWithFinalModifier<MethodDeclaration>,
-                NodeWithStrictfpModifier<MethodDeclaration>,
-                Resolvable<ResolvedMethodDeclaration> {
+public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> implements NodeWithType<MethodDeclaration, Type>, NodeWithOptionalBlockStmt<MethodDeclaration>, NodeWithJavadoc<MethodDeclaration>, NodeWithDeclaration, NodeWithSimpleName<MethodDeclaration>, NodeWithParameters<MethodDeclaration>, NodeWithThrownExceptions<MethodDeclaration>, NodeWithTypeParameters<MethodDeclaration>, NodeWithAccessModifiers<MethodDeclaration>, NodeWithAbstractModifier<MethodDeclaration>, NodeWithStaticModifier<MethodDeclaration>, NodeWithFinalModifier<MethodDeclaration>, NodeWithStrictfpModifier<MethodDeclaration>, Resolvable<ResolvedMethodDeclaration> {
 
     private Type type;
 
     @OptionalProperty
     private BlockStmt body;
 
+    /**
+     * If this method was declared with a concise expression body (-> expr;),
+     * this field holds the expression. It is null for standard method bodies.
+     * A separate transformation pass expands this into a standard BlockStmt.
+     */
+    @OptionalProperty
+    private Expression conciseBody;
+
     public MethodDeclaration() {
-        this(
-                null,
-                new NodeList<>(),
-                new NodeList<>(),
-                new NodeList<>(),
-                new ClassOrInterfaceType(),
-                new SimpleName(),
-                new NodeList<>(),
-                new NodeList<>(),
-                new BlockStmt(),
-                null);
+        this(null, new NodeList<>(), new NodeList<>(), new NodeList<>(), new ClassOrInterfaceType(), new SimpleName(), new NodeList<>(), new NodeList<>(), new BlockStmt(), null);
     }
 
     public MethodDeclaration(final NodeList<Modifier> modifiers, final Type type, final String name) {
-        this(
-                null,
-                modifiers,
-                new NodeList<>(),
-                new NodeList<>(),
-                type,
-                new SimpleName(name),
-                new NodeList<>(),
-                new NodeList<>(),
-                new BlockStmt(),
-                null);
+        this(null, modifiers, new NodeList<>(), new NodeList<>(), type, new SimpleName(name), new NodeList<>(), new NodeList<>(), new BlockStmt(), null);
     }
 
-    public MethodDeclaration(
-            final NodeList<Modifier> modifiers,
-            final String name,
-            final Type type,
-            final NodeList<Parameter> parameters) {
-        this(
-                null,
-                modifiers,
-                new NodeList<>(),
-                new NodeList<>(),
-                type,
-                new SimpleName(name),
-                parameters,
-                new NodeList<>(),
-                new BlockStmt(),
-                null);
+    public MethodDeclaration(final NodeList<Modifier> modifiers, final String name, final Type type, final NodeList<Parameter> parameters) {
+        this(null, modifiers, new NodeList<>(), new NodeList<>(), type, new SimpleName(name), parameters, new NodeList<>(), new BlockStmt(), null);
     }
 
-    public MethodDeclaration(
-            final NodeList<Modifier> modifiers,
-            final NodeList<AnnotationExpr> annotations,
-            final NodeList<TypeParameter> typeParameters,
-            final Type type,
-            final SimpleName name,
-            final NodeList<Parameter> parameters,
-            final NodeList<ReferenceType> thrownExceptions,
-            final BlockStmt body) {
+    public MethodDeclaration(final NodeList<Modifier> modifiers, final NodeList<AnnotationExpr> annotations, final NodeList<TypeParameter> typeParameters, final Type type, final SimpleName name, final NodeList<Parameter> parameters, final NodeList<ReferenceType> thrownExceptions, final BlockStmt body) {
         this(null, modifiers, annotations, typeParameters, type, name, parameters, thrownExceptions, body, null);
     }
 
     @AllFieldsConstructor
-    public MethodDeclaration(
-            final NodeList<Modifier> modifiers,
-            final NodeList<AnnotationExpr> annotations,
-            final NodeList<TypeParameter> typeParameters,
-            final Type type,
-            final SimpleName name,
-            final NodeList<Parameter> parameters,
-            final NodeList<ReferenceType> thrownExceptions,
-            final BlockStmt body,
-            ReceiverParameter receiverParameter) {
-        this(
-                null,
-                modifiers,
-                annotations,
-                typeParameters,
-                type,
-                name,
-                parameters,
-                thrownExceptions,
-                body,
-                receiverParameter);
+    public MethodDeclaration(final NodeList<Modifier> modifiers, final NodeList<AnnotationExpr> annotations, final NodeList<TypeParameter> typeParameters, final Type type, final SimpleName name, final NodeList<Parameter> parameters, final NodeList<ReferenceType> thrownExceptions, final BlockStmt body, ReceiverParameter receiverParameter) {
+        this(null, modifiers, annotations, typeParameters, type, name, parameters, thrownExceptions, body, receiverParameter);
     }
 
     /**
      * This constructor is used by the parser and is considered private.
      */
     @Generated("com.github.javaparser.generator.core.node.MainConstructorGenerator")
-    public MethodDeclaration(
-            TokenRange tokenRange,
-            NodeList<Modifier> modifiers,
-            NodeList<AnnotationExpr> annotations,
-            NodeList<TypeParameter> typeParameters,
-            Type type,
-            SimpleName name,
-            NodeList<Parameter> parameters,
-            NodeList<ReferenceType> thrownExceptions,
-            BlockStmt body,
-            ReceiverParameter receiverParameter) {
-        super(
-                tokenRange,
-                modifiers,
-                annotations,
-                typeParameters,
-                name,
-                parameters,
-                thrownExceptions,
-                receiverParameter);
+    public MethodDeclaration(TokenRange tokenRange, NodeList<Modifier> modifiers, NodeList<AnnotationExpr> annotations, NodeList<TypeParameter> typeParameters, Type type, SimpleName name, NodeList<Parameter> parameters, NodeList<ReferenceType> thrownExceptions, BlockStmt body, ReceiverParameter receiverParameter) {
+        super(tokenRange, modifiers, annotations, typeParameters, name, parameters, thrownExceptions, receiverParameter);
         setType(type);
         setBody(body);
         customInitialization();
@@ -218,10 +133,45 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
             return this;
         }
         notifyPropertyChange(ObservableProperty.BODY, this.body, body);
-        if (this.body != null) this.body.setParentNode(null);
+        if (this.body != null)
+            this.body.setParentNode(null);
         this.body = body;
         setAsParentNodeOf(body);
         return this;
+    }
+
+    /**
+     * @return the concise body expression if this method was declared with -> form, otherwise empty.
+     */
+    @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
+    public Optional<Expression> getConciseBody() {
+        return Optional.ofNullable(conciseBody);
+    }
+
+    /**
+     * Sets the concise body expression. Pass null to clear.
+     *
+     * @param conciseBody the expression, or null
+     * @return this
+     */
+    @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
+    public MethodDeclaration setConciseBody(final Expression conciseBody) {
+        if (conciseBody == this.conciseBody) {
+            return this;
+        }
+        notifyPropertyChange(ObservableProperty.CONCISE_BODY, this.conciseBody, conciseBody);
+        if (this.conciseBody != null)
+            this.conciseBody.setParentNode(null);
+        this.conciseBody = conciseBody;
+        setAsParentNodeOf(conciseBody);
+        return this;
+    }
+
+    /**
+     * @return true if this method was declared with a concise body (-> form)
+     */
+    public boolean hasConciseBody() {
+        return conciseBody != null;
     }
 
     @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
@@ -236,7 +186,8 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
             return this;
         }
         notifyPropertyChange(ObservableProperty.TYPE, this.type, type);
-        if (this.type != null) this.type.setParentNode(null);
+        if (this.type != null)
+            this.type.setParentNode(null);
         this.type = type;
         setAsParentNodeOf(type);
         return this;
@@ -277,8 +228,7 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
      * @return method declaration as String
      */
     @Override
-    public String getDeclarationAsString(
-            boolean includingModifiers, boolean includingThrows, boolean includingParameterName) {
+    public String getDeclarationAsString(boolean includingModifiers, boolean includingThrows, boolean includingParameterName) {
         StringBuilder sb = new StringBuilder();
         if (includingModifiers) {
             AccessSpecifier accessSpecifier = getAccessSpecifier();
@@ -352,10 +302,7 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
     }
 
     private boolean isImplicitlyPublic() {
-        return getAccessSpecifier() == AccessSpecifier.NONE
-                && hasParentNode()
-                && getParentNode().get() instanceof ClassOrInterfaceDeclaration
-                && ((ClassOrInterfaceDeclaration) getParentNode().get()).isInterface();
+        return getAccessSpecifier() == AccessSpecifier.NONE && hasParentNode() && getParentNode().get() instanceof ClassOrInterfaceDeclaration && ((ClassOrInterfaceDeclaration) getParentNode().get()).isInterface();
     }
 
     /*
@@ -368,11 +315,7 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
     }
 
     private boolean isImplicitlyAbstract() {
-        return hasParentNode()
-                && getParentNode().get() instanceof ClassOrInterfaceDeclaration
-                && ((ClassOrInterfaceDeclaration) getParentNode().get()).isInterface()
-                && Arrays.asList(Keyword.STATIC, Keyword.DEFAULT, Keyword.PRIVATE).stream()
-                        .noneMatch(modifier -> hasModifier(modifier));
+        return hasParentNode() && getParentNode().get() instanceof ClassOrInterfaceDeclaration && ((ClassOrInterfaceDeclaration) getParentNode().get()).isInterface() && Arrays.asList(Keyword.STATIC, Keyword.DEFAULT, Keyword.PRIVATE).stream().noneMatch(modifier -> hasModifier(modifier));
     }
 
     public boolean isNative() {
@@ -411,6 +354,12 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
                 return true;
             }
         }
+        if (conciseBody != null) {
+            if (node == conciseBody) {
+                removeConciseBody();
+                return true;
+            }
+        }
         return super.remove(node);
     }
 
@@ -440,6 +389,12 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
         if (body != null) {
             if (node == body) {
                 setBody((BlockStmt) replacementNode);
+                return true;
+            }
+        }
+        if (conciseBody != null) {
+            if (node == conciseBody) {
+                setConciseBody((Expression) replacementNode);
                 return true;
             }
         }
@@ -477,5 +432,9 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration>
     @Generated("com.github.javaparser.generator.core.node.TypeCastingGenerator")
     public Optional<MethodDeclaration> toMethodDeclaration() {
         return Optional.of(this);
+    }
+
+    public MethodDeclaration removeConciseBody() {
+        return setConciseBody((Expression) null);
     }
 }

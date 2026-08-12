@@ -37,8 +37,7 @@ public class SwitchExprValidator implements TypedValidator<SwitchExpr> {
      * there are no result expressions.
      */
     private void validateHasResultExpressions(SwitchExpr n, ProblemReporter reporter) {
-        boolean allThrow =
-                n.getEntries().stream().allMatch(entry -> entry.getType() == SwitchEntry.Type.THROWS_STATEMENT);
+        boolean allThrow = n.getEntries().stream().allMatch(entry -> entry.getType() == SwitchEntry.Type.THROWS_STATEMENT);
         if (allThrow) {
             reporter.report(n, "Switch expression does not have any result expressions.");
         }

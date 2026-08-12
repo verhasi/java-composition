@@ -2266,6 +2266,7 @@ MethodDeclaration MethodDeclaration(ModifierHolder modifier):
     List<ArrayBracketPair> arrayBracketPairs = new ArrayList<ArrayBracketPair>(0);
     NodeList<ReferenceType> throws_ = emptyNodeList();
     BlockStmt body = null;
+    Expression conciseExpr = null;
     NodeList<AnnotationExpr> annotations;
     JavaToken begin = modifier.begin;
     ReferenceType throwType;
@@ -2286,12 +2287,18 @@ MethodDeclaration MethodDeclaration(ModifierHolder modifier):
     (
         body = Block()
      |
+        "->" conciseExpr = Expression() ";"
+     |
         ";"
     )
 
     {
         type = juggleArrayType(type, arrayBracketPairs);
-        return new MethodDeclaration(range(begin, token()), modifier.modifiers, modifier.annotations, typeParameters.list, type, name, parameters.a, throws_, body, parameters.b);
+        MethodDeclaration md = new MethodDeclaration(range(begin, token()), modifier.modifiers, modifier.annotations, typeParameters.list, type, name, parameters.a, throws_, body, parameters.b);
+        if (conciseExpr != null) {
+            md.setConciseBody(conciseExpr);
+        }
+        return md;
     }
 }
 
