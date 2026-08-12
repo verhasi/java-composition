@@ -1,0 +1,17 @@
+# Build output
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+
+# Forked JavaParser - exclude its .git
+javaparser/.git/
