@@ -89,7 +89,7 @@ The expression can be anything: method calls, arithmetic, ternary, switch expres
 
 ### `=` (Method Reference Form)
 
-The method reference is **invoked** with the method's parameters mapped to the call. Requires type resolution to disambiguate static vs instance methods.
+The method reference is **invoked** with the method's parameters mapped to the call. The preprocessor infers which method is being referenced and generates the correct invocation.
 
 | Reference kind | Concise | Expanded |
 |---|---|---|
