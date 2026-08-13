@@ -42,7 +42,8 @@ Create a Gradle plugin for the same purpose.
 
 Ensure the tool itself and its output work across Java versions.
 
-- Preprocessor compiled for Java 11 (minimum runtime to run the tool)
+- Preprocessor source compiled for Java 8 (runs on any JVM from 8 onwards)
+- Remove Java 9+ features from preprocessor source (text blocks, var, instanceof patterns, switch expressions)
 - Output is compatible with Java 8+ (no Java 9+ features in generated code)
 - Test preprocessing and compiling output with Java 8, 11, 17, 21, 25 targets
 - Document supported versions in README
