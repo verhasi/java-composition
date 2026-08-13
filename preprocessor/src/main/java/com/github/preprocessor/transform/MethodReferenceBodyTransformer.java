@@ -360,6 +360,19 @@ public class MethodReferenceBodyTransformer extends ModifierVisitor<Void> {
             }
         }
 
+        // Try same package as the declaring class
+        if (!typeName.contains(".") && md.findCompilationUnit().isPresent()) {
+            var cu = md.findCompilationUnit().get();
+            if (cu.getPackageDeclaration().isPresent()) {
+                String pkg = cu.getPackageDeclaration().get().getNameAsString();
+                try {
+                    return typeSolver.solveType(pkg + "." + typeName);
+                } catch (Exception e) {
+                    // Fall through
+                }
+            }
+        }
+
         // Try imports from the compilation unit
         if (md.findCompilationUnit().isPresent()) {
             var cu = md.findCompilationUnit().get();

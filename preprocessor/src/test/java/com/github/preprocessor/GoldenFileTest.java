@@ -45,7 +45,9 @@ class GoldenFileTest {
                 Arguments.of("com/example/AllCases.java"),
                 Arguments.of("com/example/Greeting.java"),
                 Arguments.of("com/example/Standard.java"),
+                Arguments.of("com/example/Helper.java"),
                 Arguments.of("com/example/MethodRefCases.java"),
+                Arguments.of("com/example/SourceTreeResolution.java"),
                 Arguments.of("java/util/Collections.java")
         );
     }
