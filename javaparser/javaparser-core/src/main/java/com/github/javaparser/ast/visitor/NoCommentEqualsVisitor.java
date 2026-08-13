@@ -276,6 +276,8 @@ public class NoCommentEqualsVisitor implements GenericVisitor<Boolean, Visitable
             return false;
         if (!nodeEquals(n.getExpressionBody(), n2.getExpressionBody()))
             return false;
+        if (!nodeEquals(n.getMethodReferenceBody(), n2.getMethodReferenceBody()))
+            return false;
         if (!nodeEquals(n.getType(), n2.getType()))
             return false;
         if (!nodesEquals(n.getModifiers(), n2.getModifiers()))

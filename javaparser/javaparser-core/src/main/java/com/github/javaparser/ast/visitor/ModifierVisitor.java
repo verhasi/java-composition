@@ -672,6 +672,7 @@ public class ModifierVisitor<A> implements GenericVisitor<Visitable, A> {
         NodeList<Modifier> modifiers = modifyList(n.getModifiers(), arg);
         BlockStmt body = n.getBody().map(s -> (BlockStmt) s.accept(this, arg)).orElse(null);
         Expression expressionBody = n.getExpressionBody().map(s -> (Expression) s.accept(this, arg)).orElse(null);
+        Expression methodReferenceBody = n.getMethodReferenceBody().map(s -> (Expression) s.accept(this, arg)).orElse(null);
         Type type = (Type) n.getType().accept(this, arg);
         SimpleName name = (SimpleName) n.getName().accept(this, arg);
         NodeList<Parameter> parameters = modifyList(n.getParameters(), arg);
@@ -685,6 +686,7 @@ public class ModifierVisitor<A> implements GenericVisitor<Visitable, A> {
         n.setModifiers(modifiers);
         n.setBody(body);
         n.setExpressionBody(expressionBody);
+        n.setMethodReferenceBody(methodReferenceBody);
         n.setType(type);
         n.setName(name);
         n.setParameters(parameters);

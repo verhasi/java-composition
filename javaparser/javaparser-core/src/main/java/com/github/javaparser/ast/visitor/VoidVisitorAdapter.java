@@ -371,6 +371,7 @@ public abstract class VoidVisitorAdapter<A> implements VoidVisitor<A> {
     public void visit(final MethodDeclaration n, final A arg) {
         n.getBody().ifPresent(l -> l.accept(this, arg));
         n.getExpressionBody().ifPresent(l -> l.accept(this, arg));
+        n.getMethodReferenceBody().ifPresent(l -> l.accept(this, arg));
         n.getType().accept(this, arg);
         n.getModifiers().forEach(p -> p.accept(this, arg));
         n.getName().accept(this, arg);

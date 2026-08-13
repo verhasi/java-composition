@@ -1,6 +1,15 @@
 package com.github.preprocessor;
 
 import com.github.preprocessor.transform.ExpressionBodyTransformer;
+import com.github.preprocessor.transform.MethodReferenceBodyTransformer;
+
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.resolution.TypeSolver;
+import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,7 +18,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -38,6 +46,8 @@ public class Preprocessor {
     private final Path targetRoot;
     private final List<Path> classpath;
     private final ExpressionBodyTransformer expressionBodyTransformer;
+    private final MethodReferenceBodyTransformer methodReferenceBodyTransformer;
+    private final JavaParser parser;
 
     /**
      * Creates a preprocessor for the given source tree.
@@ -51,6 +61,13 @@ public class Preprocessor {
         this.targetRoot = targetRoot;
         this.classpath = List.copyOf(classpath);
         this.expressionBodyTransformer = new ExpressionBodyTransformer();
+
+        TypeSolver typeSolver = MethodReferenceBodyTransformer.createTypeSolver(sourceRoot, classpath);
+        this.methodReferenceBodyTransformer = new MethodReferenceBodyTransformer(typeSolver);
+
+        ParserConfiguration config = new ParserConfiguration();
+        config.setSymbolResolver(new JavaSymbolSolver(typeSolver));
+        this.parser = new JavaParser(config);
     }
 
     /**
@@ -99,16 +116,40 @@ public class Preprocessor {
         // Read source file
         String source = Files.readString(sourceFile);
 
-        // Try to transform
-        Optional<String> transformed = expressionBodyTransformer.transformIfNeeded(source);
-
-        if (transformed.isPresent()) {
-            // Write transformed output
-            Files.writeString(targetFile, transformed.get());
-        } else {
-            // Copy unchanged
+        // Parse
+        ParseResult<CompilationUnit> parseResult = parser.parse(source);
+        if (!parseResult.getResult().isPresent()) {
+            // Can't parse — copy unchanged
             Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+            return;
         }
+
+        CompilationUnit cu = parseResult.getResult().get();
+
+        // Check if any concise bodies exist
+        boolean hasExpressionBodies = cu.findAll(MethodDeclaration.class).stream()
+                .anyMatch(MethodDeclaration::hasExpressionBody);
+        boolean hasMethodReferenceBodies = cu.findAll(MethodDeclaration.class).stream()
+                .anyMatch(MethodDeclaration::hasMethodReferenceBody);
+
+        if (!hasExpressionBodies && !hasMethodReferenceBodies) {
+            // No concise syntax — copy unchanged
+            Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+            return;
+        }
+
+        // Transform: expression bodies (-> form)
+        if (hasExpressionBodies) {
+            expressionBodyTransformer.visit(cu, null);
+        }
+
+        // Transform: method reference bodies (= form)
+        if (hasMethodReferenceBodies) {
+            methodReferenceBodyTransformer.visit(cu, null);
+        }
+
+        // Write transformed output
+        Files.writeString(targetFile, cu.toString());
     }
 
     public Path getSourceRoot() {

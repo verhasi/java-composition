@@ -225,6 +225,7 @@ public class CloneVisitor implements GenericVisitor<Visitable, Object> {
     public Visitable visit(final MethodDeclaration n, final Object arg) {
         BlockStmt body = cloneNode(n.getBody(), arg);
         Expression expressionBody = cloneNode(n.getExpressionBody(), arg);
+        Expression methodReferenceBody = cloneNode(n.getMethodReferenceBody(), arg);
         Type type = cloneNode(n.getType(), arg);
         NodeList<Modifier> modifiers = cloneList(n.getModifiers(), arg);
         SimpleName name = cloneNode(n.getName(), arg);

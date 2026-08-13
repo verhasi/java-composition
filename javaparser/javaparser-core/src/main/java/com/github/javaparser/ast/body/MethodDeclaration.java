@@ -72,6 +72,14 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
     @OptionalProperty
     private Expression expressionBody;
 
+    /**
+     * If this method was declared with a method reference body (= MethodRef;),
+     * this field holds the method reference expression. It is null for standard method bodies.
+     * A separate transformation pass resolves and expands this into a standard BlockStmt.
+     */
+    @OptionalProperty
+    private Expression methodReferenceBody;
+
     public MethodDeclaration() {
         this(null, new NodeList<>(), new NodeList<>(), new NodeList<>(), new ClassOrInterfaceType(), new SimpleName(), new NodeList<>(), new NodeList<>(), new BlockStmt(), null);
     }
@@ -172,6 +180,40 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
      */
     public boolean hasExpressionBody() {
         return expressionBody != null;
+    }
+
+    /**
+     * @return the method reference body if this method was declared with = form, otherwise empty.
+     */
+    @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
+    public Optional<Expression> getMethodReferenceBody() {
+        return Optional.ofNullable(methodReferenceBody);
+    }
+
+    /**
+     * Sets the method reference body. Pass null to clear.
+     *
+     * @param methodReferenceBody the method reference expression, or null
+     * @return this
+     */
+    @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
+    public MethodDeclaration setMethodReferenceBody(final Expression methodReferenceBody) {
+        if (methodReferenceBody == this.methodReferenceBody) {
+            return this;
+        }
+        notifyPropertyChange(ObservableProperty.METHOD_REFERENCE_BODY, this.methodReferenceBody, methodReferenceBody);
+        if (this.methodReferenceBody != null)
+            this.methodReferenceBody.setParentNode(null);
+        this.methodReferenceBody = methodReferenceBody;
+        setAsParentNodeOf(methodReferenceBody);
+        return this;
+    }
+
+    /**
+     * @return true if this method was declared with a method reference body (= form)
+     */
+    public boolean hasMethodReferenceBody() {
+        return methodReferenceBody != null;
     }
 
     @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
@@ -360,6 +402,12 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
                 return true;
             }
         }
+        if (methodReferenceBody != null) {
+            if (node == methodReferenceBody) {
+                removeMethodReferenceBody();
+                return true;
+            }
+        }
         return super.remove(node);
     }
 
@@ -395,6 +443,12 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
         if (expressionBody != null) {
             if (node == expressionBody) {
                 setExpressionBody((Expression) replacementNode);
+                return true;
+            }
+        }
+        if (methodReferenceBody != null) {
+            if (node == methodReferenceBody) {
+                setMethodReferenceBody((Expression) replacementNode);
                 return true;
             }
         }
@@ -434,7 +488,12 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
         return Optional.of(this);
     }
 
+    @Generated("com.github.javaparser.generator.core.node.RemoveMethodGenerator")
     public MethodDeclaration removeExpressionBody() {
         return setExpressionBody((Expression) null);
+    }
+
+    public MethodDeclaration removeMethodReferenceBody() {
+        return setMethodReferenceBody((Expression) null);
     }
 }
