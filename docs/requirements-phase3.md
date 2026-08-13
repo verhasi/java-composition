@@ -68,12 +68,14 @@ The four positions in `*::* = *::*` can each be:
 | Position 3 (Target) | Meaning |
 |---|---|
 | `delegate` | A specific field |
-| `*` | Auto-discover which field implements the interface |
+| `[store, resource]` | Multiple specific fields (matched by method signature) |
+| `*` | Auto-discover which field has a matching method |
 
 | Position 4 (Method) | Meaning |
 |---|---|
 | `*` | Same method name as the left side |
 | `specificMethod` | Map to a different method name |
+| `[get, put, remove]` | Specific named methods on the target |
 
 ### Examples
 
@@ -193,12 +195,20 @@ The expander requires full type resolution (same as `=` form) to:
 - Match type parameters between the interface and the implementing class
 - Generate correct parameter types in the method signatures
 
-### FR-5: Conflict Detection
+### FR-5: Matching Rule
+
+The delegation target does NOT need to implement the referenced interface. Matching
+is based on **method signature compatibility**: the target must have a method with
+a matching name, compatible parameter types, and an assignable return type.
+
+A wildcard that expands to zero methods (because all methods are already overridden,
+or no matching methods exist on the target) is valid — it simply produces nothing.
+
+### FR-6: Conflict Detection
 
 The expander MUST detect and report errors for:
-- Target field doesn't implement the referenced interface
-- Multiple wildcards generating the same method (ambiguous delegation target)
-- No suitable field found when using `*` as the target
+- Multiple wildcards generating the same method with different delegation targets
+  (ambiguous — which target should be used?)
 
 ## Extensibility
 
@@ -207,13 +217,3 @@ transformers without modifying existing ones:
 - Each transformer is independent and idempotent
 - New transformers are inserted at the appropriate position in the round
 - The loop handles convergence automatically
-
-## Future Considerations
-
-- **Auto-target matching**: `*::* = *::*` where the right-side `*` automatically
-  finds the field that implements each interface
-- **Constructor parameter delegation**: fields initialized from constructor params
-  are natural delegation targets
-- **Partial delegation**: `List::[size, isEmpty, contains] = items::*` for
-  selecting a subset of methods
-- **Method renaming**: `List::size = items::count` for mapping to differently-named methods
