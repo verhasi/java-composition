@@ -26,8 +26,8 @@ class ConciseMethodBodyParsingTest {
         MethodDeclaration method = cu.findFirst(MethodDeclaration.class).orElseThrow();
 
         assertEquals("length", method.getNameAsString());
-        assertTrue(method.hasConciseBody(), "Should have concise body");
-        assertEquals("s.length()", method.getConciseBody().orElseThrow().toString());
+        assertTrue(method.hasExpressionBody(), "Should have expression body");
+        assertEquals("s.length()", method.getExpressionBody().orElseThrow().toString());
         // body should be null since it was declared with -> form
         assertFalse(method.getBody().isPresent(), "Standard body should be absent");
     }
@@ -44,8 +44,8 @@ class ConciseMethodBodyParsingTest {
         MethodDeclaration method = cu.findFirst(MethodDeclaration.class).orElseThrow();
 
         assertEquals("log", method.getNameAsString());
-        assertTrue(method.hasConciseBody(), "Should have concise body");
-        assertEquals("System.out.println(msg)", method.getConciseBody().orElseThrow().toString());
+        assertTrue(method.hasExpressionBody(), "Should have expression body");
+        assertEquals("System.out.println(msg)", method.getExpressionBody().orElseThrow().toString());
         assertFalse(method.getBody().isPresent(), "Standard body should be absent");
     }
 
@@ -64,8 +64,8 @@ class ConciseMethodBodyParsingTest {
         assertEquals("read", method.getNameAsString());
         assertFalse(method.getThrownExceptions().isEmpty());
         assertTrue(method.isAnnotationPresent("Override"));
-        assertTrue(method.hasConciseBody());
-        assertEquals("input.read()", method.getConciseBody().orElseThrow().toString());
+        assertTrue(method.hasExpressionBody());
+        assertEquals("input.read()", method.getExpressionBody().orElseThrow().toString());
     }
 
     @Test
@@ -82,8 +82,8 @@ class ConciseMethodBodyParsingTest {
 
         assertEquals("first", method.getNameAsString());
         assertFalse(method.getTypeParameters().isEmpty());
-        assertTrue(method.hasConciseBody());
-        assertEquals("list.get(0)", method.getConciseBody().orElseThrow().toString());
+        assertTrue(method.hasExpressionBody());
+        assertEquals("list.get(0)", method.getExpressionBody().orElseThrow().toString());
     }
 
     @Test
@@ -105,16 +105,16 @@ class ConciseMethodBodyParsingTest {
         assertEquals(3, methods.size());
 
         // add method - concise
-        assertTrue(methods.get(0).hasConciseBody());
-        assertEquals("a + b", methods.get(0).getConciseBody().orElseThrow().toString());
+        assertTrue(methods.get(0).hasExpressionBody());
+        assertEquals("a + b", methods.get(0).getExpressionBody().orElseThrow().toString());
 
         // greet method - regular (has body, no concise)
-        assertFalse(methods.get(1).hasConciseBody());
+        assertFalse(methods.get(1).hasExpressionBody());
         assertTrue(methods.get(1).getBody().isPresent());
 
         // close method - concise void
-        assertTrue(methods.get(2).hasConciseBody());
-        assertEquals("stream.close()", methods.get(2).getConciseBody().orElseThrow().toString());
+        assertTrue(methods.get(2).hasExpressionBody());
+        assertEquals("stream.close()", methods.get(2).getExpressionBody().orElseThrow().toString());
     }
 
     @Test
@@ -129,8 +129,8 @@ class ConciseMethodBodyParsingTest {
         CompilationUnit cu = StaticJavaParser.parse(code);
         MethodDeclaration method = cu.findFirst(MethodDeclaration.class).orElseThrow();
 
-        assertTrue(method.hasConciseBody());
-        assertEquals("String::isEmpty", method.getConciseBody().orElseThrow().toString());
+        assertTrue(method.hasExpressionBody());
+        assertEquals("String::isEmpty", method.getExpressionBody().orElseThrow().toString());
     }
 
     @Test
@@ -151,12 +151,12 @@ class ConciseMethodBodyParsingTest {
         assertEquals(2, methods.size());
 
         // Regular method with body
-        assertFalse(methods.get(0).hasConciseBody());
+        assertFalse(methods.get(0).hasExpressionBody());
         assertTrue(methods.get(0).getBody().isPresent());
         assertEquals(2, methods.get(0).getBody().get().getStatements().size());
 
         // Abstract method without body
-        assertFalse(methods.get(1).hasConciseBody());
+        assertFalse(methods.get(1).hasExpressionBody());
         assertFalse(methods.get(1).getBody().isPresent());
     }
 }

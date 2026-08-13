@@ -7,13 +7,13 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConciseBodyTransformerTest {
+class ExpressionBodyTransformerTest {
 
-    private ConciseBodyTransformer transformer;
+    private ExpressionBodyTransformer transformer;
 
     @BeforeEach
     void setUp() {
-        transformer = new ConciseBodyTransformer();
+        transformer = new ExpressionBodyTransformer();
     }
 
     @Test
@@ -23,7 +23,7 @@ class ConciseBodyTransformerTest {
                     int length(String s) -> s.length();
                 }
                 """;
-        assertTrue(transformer.containsConciseSyntax(code));
+        assertTrue(transformer.containsExpressionBody(code));
     }
 
     @Test
@@ -35,7 +35,7 @@ class ConciseBodyTransformerTest {
                     }
                 }
                 """;
-        assertFalse(transformer.containsConciseSyntax(code));
+        assertFalse(transformer.containsExpressionBody(code));
     }
 
     @Test

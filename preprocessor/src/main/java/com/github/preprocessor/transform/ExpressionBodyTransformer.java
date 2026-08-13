@@ -36,17 +36,17 @@ import java.util.Optional;
  *
  * <h2>Architecture</h2>
  * <p>The forked JavaParser grammar parses concise method bodies and stores the
- * expression in the {@code conciseBody} field of {@code MethodDeclaration}.
+ * expression in the {@code expressionBody} field of {@code MethodDeclaration}.
  * This visitor then expands those expressions into standard {@code BlockStmt} bodies.
  * This two-pass design allows future transformers to operate on the concise AST
  * representation before expansion (e.g., converting new syntax forms into concise bodies).
  */
-public class ConciseBodyTransformer extends ModifierVisitor<Void> {
+public class ExpressionBodyTransformer extends ModifierVisitor<Void> {
 
     private final JavaParser parser;
     private boolean transformed;
 
-    public ConciseBodyTransformer() {
+    public ExpressionBodyTransformer() {
         this.parser = new JavaParser(new ParserConfiguration());
     }
 
@@ -55,8 +55,8 @@ public class ConciseBodyTransformer extends ModifierVisitor<Void> {
      */
     @Override
     public Visitable visit(MethodDeclaration md, Void arg) {
-        if (md.hasConciseBody()) {
-            Expression expr = md.getConciseBody().orElseThrow();
+        if (md.hasExpressionBody()) {
+            Expression expr = md.getExpressionBody().orElseThrow();
             NodeList<Statement> stmts = new NodeList<>();
 
             if (md.getType() instanceof VoidType) {
@@ -69,7 +69,7 @@ public class ConciseBodyTransformer extends ModifierVisitor<Void> {
 
             BlockStmt body = new BlockStmt(stmts);
             md.setBody(body);
-            md.setConciseBody(null);
+            md.setExpressionBody(null);
             transformed = true;
         }
         return super.visit(md, arg);
@@ -81,12 +81,12 @@ public class ConciseBodyTransformer extends ModifierVisitor<Void> {
      * @param source the Java source code
      * @return true if parsing succeeds and at least one method has a concise body
      */
-    public boolean containsConciseSyntax(String source) {
+    public boolean containsExpressionBody(String source) {
         ParseResult<CompilationUnit> result = parser.parse(source);
         if (result.getResult().isPresent()) {
             CompilationUnit cu = result.getResult().get();
             return cu.findAll(MethodDeclaration.class).stream()
-                    .anyMatch(MethodDeclaration::hasConciseBody);
+                    .anyMatch(MethodDeclaration::hasExpressionBody);
         }
         return false;
     }

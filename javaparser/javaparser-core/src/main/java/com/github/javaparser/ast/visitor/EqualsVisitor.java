@@ -348,7 +348,7 @@ public class EqualsVisitor implements GenericVisitor<Boolean, Visitable> {
         final MethodDeclaration n2 = (MethodDeclaration) arg;
         if (!nodeEquals(n.getBody(), n2.getBody()))
             return false;
-        if (!nodeEquals(n.getConciseBody(), n2.getConciseBody()))
+        if (!nodeEquals(n.getExpressionBody(), n2.getExpressionBody()))
             return false;
         if (!nodeEquals(n.getType(), n2.getType()))
             return false;

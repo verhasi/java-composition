@@ -70,7 +70,7 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
      * A separate transformation pass expands this into a standard BlockStmt.
      */
     @OptionalProperty
-    private Expression conciseBody;
+    private Expression expressionBody;
 
     public MethodDeclaration() {
         this(null, new NodeList<>(), new NodeList<>(), new NodeList<>(), new ClassOrInterfaceType(), new SimpleName(), new NodeList<>(), new NodeList<>(), new BlockStmt(), null);
@@ -144,34 +144,34 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
      * @return the concise body expression if this method was declared with -> form, otherwise empty.
      */
     @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
-    public Optional<Expression> getConciseBody() {
-        return Optional.ofNullable(conciseBody);
+    public Optional<Expression> getExpressionBody() {
+        return Optional.ofNullable(expressionBody);
     }
 
     /**
      * Sets the concise body expression. Pass null to clear.
      *
-     * @param conciseBody the expression, or null
+     * @param expressionBody the expression, or null
      * @return this
      */
     @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
-    public MethodDeclaration setConciseBody(final Expression conciseBody) {
-        if (conciseBody == this.conciseBody) {
+    public MethodDeclaration setExpressionBody(final Expression expressionBody) {
+        if (expressionBody == this.expressionBody) {
             return this;
         }
-        notifyPropertyChange(ObservableProperty.CONCISE_BODY, this.conciseBody, conciseBody);
-        if (this.conciseBody != null)
-            this.conciseBody.setParentNode(null);
-        this.conciseBody = conciseBody;
-        setAsParentNodeOf(conciseBody);
+        notifyPropertyChange(ObservableProperty.METHOD_EXPRESSION_BODY, this.expressionBody, expressionBody);
+        if (this.expressionBody != null)
+            this.expressionBody.setParentNode(null);
+        this.expressionBody = expressionBody;
+        setAsParentNodeOf(expressionBody);
         return this;
     }
 
     /**
      * @return true if this method was declared with a concise body (-> form)
      */
-    public boolean hasConciseBody() {
-        return conciseBody != null;
+    public boolean hasExpressionBody() {
+        return expressionBody != null;
     }
 
     @Generated("com.github.javaparser.generator.core.node.PropertyGenerator")
@@ -354,9 +354,9 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
                 return true;
             }
         }
-        if (conciseBody != null) {
-            if (node == conciseBody) {
-                removeConciseBody();
+        if (expressionBody != null) {
+            if (node == expressionBody) {
+                removeExpressionBody();
                 return true;
             }
         }
@@ -392,9 +392,9 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
                 return true;
             }
         }
-        if (conciseBody != null) {
-            if (node == conciseBody) {
-                setConciseBody((Expression) replacementNode);
+        if (expressionBody != null) {
+            if (node == expressionBody) {
+                setExpressionBody((Expression) replacementNode);
                 return true;
             }
         }
@@ -434,7 +434,7 @@ public class MethodDeclaration extends CallableDeclaration<MethodDeclaration> im
         return Optional.of(this);
     }
 
-    public MethodDeclaration removeConciseBody() {
-        return setConciseBody((Expression) null);
+    public MethodDeclaration removeExpressionBody() {
+        return setExpressionBody((Expression) null);
     }
 }

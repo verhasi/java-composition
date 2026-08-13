@@ -31,12 +31,10 @@ class GoldenFileTest {
     private static final Path GOLDEN_INPUT = Path.of("src/test/resources/golden/input");
     private static final Path GOLDEN_EXPECTED = Path.of("src/test/resources/golden/expected");
 
-    private Preprocessor preprocessor;
     private SemanticComparator comparator;
 
     @BeforeEach
     void setUp() {
-        preprocessor = new Preprocessor();
         var config = new ParserConfiguration();
         config.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21);
         comparator = new SemanticComparator(new JavaParser(config));
@@ -55,8 +53,9 @@ class GoldenFileTest {
     @MethodSource("goldenFiles")
     void transformedOutputIsSemanticEquivalentToExpected(String relativePath, @TempDir Path targetRoot) throws IOException {
         Path relativeFile = Path.of(relativePath);
+        Preprocessor preprocessor = new Preprocessor(GOLDEN_INPUT, targetRoot);
 
-        preprocessor.process(GOLDEN_INPUT, targetRoot, relativeFile);
+        preprocessor.process(relativeFile);
 
         Path actualFile = targetRoot.resolve(relativeFile);
         Path expectedFile = GOLDEN_EXPECTED.resolve(relativeFile);
@@ -82,8 +81,8 @@ class GoldenFileTest {
                 }
                 """;
 
-        var transformer = new com.github.preprocessor.transform.ConciseBodyTransformer();
-        assertFalse(transformer.containsConciseSyntax(code),
-                "throw after -> should not parse as a valid concise method body");
+        var transformer = new com.github.preprocessor.transform.ExpressionBodyTransformer();
+        assertFalse(transformer.containsExpressionBody(code),
+                "throw after -> should not parse as a valid expression body");
     }
 }

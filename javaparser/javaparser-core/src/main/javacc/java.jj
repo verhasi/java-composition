@@ -2296,7 +2296,7 @@ MethodDeclaration MethodDeclaration(ModifierHolder modifier):
         type = juggleArrayType(type, arrayBracketPairs);
         MethodDeclaration md = new MethodDeclaration(range(begin, token()), modifier.modifiers, modifier.annotations, typeParameters.list, type, name, parameters.a, throws_, body, parameters.b);
         if (conciseExpr != null) {
-            md.setConciseBody(conciseExpr);
+            md.setExpressionBody(conciseExpr);
         }
         return md;
     }
