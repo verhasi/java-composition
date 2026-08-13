@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -72,6 +73,28 @@ class GoldenFileTest {
         ComparisonResult result = comparator.compare(actual, expected);
         assertTrue(result.isEquivalent(),
                 relativePath + " — transformation not semantically equivalent: " + result);
+    }
+
+    @Test
+    void classpathResolution(@TempDir Path targetRoot) throws IOException {
+        // This test requires a JAR on the classpath for type resolution
+        Path jarPath = Path.of("src/test/resources/lib/external-util.jar");
+        Preprocessor preprocessor = new Preprocessor(GOLDEN_INPUT, targetRoot, List.of(jarPath));
+
+        Path relativeFile = Path.of("com/example/ClasspathResolution.java");
+        preprocessor.process(relativeFile);
+
+        Path actualFile = targetRoot.resolve(relativeFile);
+        Path expectedFile = GOLDEN_EXPECTED.resolve(relativeFile);
+
+        assertTrue(Files.exists(actualFile), "Actual output file should exist");
+
+        String actual = Files.readString(actualFile);
+        String expected = Files.readString(expectedFile);
+
+        ComparisonResult result = comparator.compare(actual, expected);
+        assertTrue(result.isEquivalent(),
+                "ClasspathResolution.java — transformation not semantically equivalent: " + result);
     }
 
     @Test
