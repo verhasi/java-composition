@@ -20,7 +20,8 @@
         <dependency>
             <groupId>com.github.javaparser</groupId>
             <artifactId>javaparser-core</artifactId>
-            <version>3.28.2</version>
+            <version>3.28.2-SNAPSHOT</version>
+            <classifier>java-composition</classifier>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
