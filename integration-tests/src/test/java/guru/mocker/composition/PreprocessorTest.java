@@ -1,4 +1,4 @@
-package com.github.preprocessor;
+package guru.mocker.composition;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

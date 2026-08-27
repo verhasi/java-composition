@@ -1,8 +1,8 @@
-package com.github.preprocessor;
+package guru.mocker.composition;
 
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.MethodDeclaration;
+import guru.mocker.internal.javaparser.StaticJavaParser;
+import guru.mocker.internal.javaparser.ast.CompilationUnit;
+import guru.mocker.internal.javaparser.ast.body.MethodDeclaration;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

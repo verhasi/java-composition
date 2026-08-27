@@ -1,12 +1,12 @@
-package com.github.preprocessor.transform;
+package guru.mocker.composition.transform;
 
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.MethodReferenceExpr;
-import com.github.javaparser.resolution.TypeSolver;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
+import guru.mocker.internal.javaparser.StaticJavaParser;
+import guru.mocker.internal.javaparser.ast.CompilationUnit;
+import guru.mocker.internal.javaparser.ast.body.MethodDeclaration;
+import guru.mocker.internal.javaparser.ast.expr.Expression;
+import guru.mocker.internal.javaparser.ast.expr.MethodReferenceExpr;
+import guru.mocker.internal.javaparser.resolution.TypeSolver;
+import guru.mocker.internal.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

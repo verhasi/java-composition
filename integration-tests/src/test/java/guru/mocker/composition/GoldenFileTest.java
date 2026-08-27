@@ -1,4 +1,4 @@
-package com.github.preprocessor;
+package guru.mocker.composition;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
@@ -107,7 +107,7 @@ class GoldenFileTest {
                 }
                 """;
 
-        var transformer = new com.github.preprocessor.transform.ExpressionBodyTransformer();
+        var transformer = new guru.mocker.composition.transform.ExpressionBodyTransformer();
         assertFalse(transformer.containsExpressionBody(code),
                 "throw after -> should not parse as a valid expression body");
     }

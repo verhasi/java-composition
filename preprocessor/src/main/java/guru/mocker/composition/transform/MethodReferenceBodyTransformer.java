@@ -1,4 +1,4 @@
-package com.github.preprocessor.transform;
+package guru.mocker.composition.transform;
 
 import com.github.javaparser.ast.ArrayCreationLevel;
 import com.github.javaparser.ast.NodeList;
@@ -141,7 +141,7 @@ public class MethodReferenceBodyTransformer extends ModifierVisitor<Void> {
             return expandConstructorReference(md, scope);
         }
 
-        // Case 2: Array creation reference (Type[]::new) 
+        // Case 2: Array creation reference (Type[]::new)
         // Handled by constructor case since JavaParser parses it with scope as ArrayType
         if (scope instanceof TypeExpr typeExpr && typeExpr.getType() instanceof ArrayType) {
             return expandArrayCreationReference(md, typeExpr);

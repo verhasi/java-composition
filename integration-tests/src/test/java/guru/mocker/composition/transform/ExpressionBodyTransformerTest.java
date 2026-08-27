@@ -1,4 +1,4 @@
-package com.github.preprocessor.transform;
+package guru.mocker.composition.transform;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

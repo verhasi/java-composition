@@ -121,3 +121,60 @@ Syntax highlighting and error detection in IDEs.
 | 8 | Multi-Round Processing | Foundation for Phase 3 |
 | 9 | Gradle Plugin | Broader build tool support |
 | 10 | IDE Support | Developer experience |
+
+---
+
+## Addendum: Decisions on Open Questions (2026-08-26)
+
+### Maven Coordinates
+
+- **GroupId**: `guru.mocker.composition` for all modules
+- **Artifacts**:
+  - `guru.mocker.composition:java-composition` — shaded preprocessor library
+  - `guru.mocker.composition:java-composition-maven-plugin` — Maven plugin
+- **Version**: `0.1.0-SNAPSHOT` (first release will be `0.1.0`, functionality not yet at 1.0 level)
+
+### POM Structure
+
+The root POM is a **reactor aggregator only** — it lists modules but is not their parent.
+Each module independently inherits from `guru.mocker:parent:1.0.20` for release/deploy
+infrastructure (Sonatype, GPG signing, deploy config).
+
+```
+java-composition/pom.xml          (aggregator, no parent, packaging=pom)
+├── preprocessor/pom.xml           (parent = guru.mocker:parent:1.0.20)
+└── maven-plugin/pom.xml           (parent = guru.mocker:parent:1.0.20)
+```
+
+The `javaparser/` subtree remains outside the reactor — built separately with `./mvnw`.
+
+### Java Version
+
+- **Preprocessor runtime requirement**: Java 21. The tool itself uses Java 21 features
+  (pattern matching, `var`, etc.) and requires Java 21+ to run.
+- **Output compatibility**: The generated Java source is compatible with whatever source
+  level the consuming project targets (Java 8, 11, 17, 21, 25). The Maven plugin passes
+  the project's configured source version to JavaParser's `ParserConfiguration`.
+- **No rewrite to Java 8**: The preprocessor source stays at Java 21.
+
+### Maven Plugin Details
+
+- **Package**: `guru.mocker.maven.plugin`
+- **Goal prefix**: `java-composition` (auto-derived from artifact name)
+- **Source handling**: Processes the project's configured compile source directories
+  (typically `src/main/java`). Test sources not in scope for now.
+- **Incremental build**: Not needed — full reprocess every invocation.
+
+### Multi-Round Processing
+
+Not needed for the current release. The Maven plugin does not need to account for it.
+Can be added later without breaking the plugin interface.
+
+### CI/CD and Release
+
+- **Source**: GitHub (public)
+- **Release pipeline**: Mirror to Bitbucket, release via Bitbucket Pipelines
+  (reusing existing `guru.mocker` release infrastructure and Sonatype credentials)
+- **SCM URL**: Resolved at release time via `${BITBUCKET_GIT_HTTP_ORIGIN}` (same
+  pattern as the mixin project)
+- **GPG key**: Existing key from other `guru.mocker` releases

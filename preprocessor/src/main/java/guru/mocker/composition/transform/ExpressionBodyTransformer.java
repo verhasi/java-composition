@@ -1,4 +1,4 @@
-package com.github.preprocessor.transform;
+package guru.mocker.composition.transform;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;

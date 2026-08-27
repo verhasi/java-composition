@@ -1,20 +1,34 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.github.preprocessor</groupId>
-        <artifactId>java-composition-parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <groupId>guru.mocker</groupId>
+        <artifactId>parent</artifactId>
+        <version>1.0.20</version>
+        <relativePath/>
     </parent>
 
-    <groupId>guru.mocker</groupId>
+    <groupId>guru.mocker.composition</groupId>
     <artifactId>java-composition</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Java Composition</name>
     <description>Source code preprocessor for Concise Method Bodies (JEP 8209434)</description>
+
+    <scm>
+        <!--suppress UnresolvedMavenProperty -->
+        <url>${guru.mocker.composition.scm.url}</url>
+        <connection>scm:git:${project.scm.url}</connection>
+        <developerConnection>${project.scm.connection}</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -29,17 +43,6 @@
             <version>3.28.2-SNAPSHOT</version>
             <classifier>java-composition</classifier>
         </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>guru.mocker</groupId>
-            <artifactId>comparator-core</artifactId>
-            <version>1.0.37-SNAPSHOT</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -47,11 +50,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.12.1</version>
+                <configuration>
+                    <release>21</release>
+                </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -67,7 +71,7 @@
                             <relocations>
                                 <relocation>
                                     <pattern>com.github.javaparser</pattern>
-                                    <shadedPattern>guru.mocker.javaparser</shadedPattern>
+                                    <shadedPattern>guru.mocker.internal.javaparser</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>javassist</pattern>
@@ -84,7 +88,6 @@
                             </relocations>
                             <filters>
                                 <filter>
-                                    <!-- Exclude signing metadata from dependencies -->
                                     <artifact>*:*</artifact>
                                     <excludes>
                                         <exclude>META-INF/*.SF</exclude>
@@ -103,4 +106,14 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <properties>
+                <!--suppress UnresolvedMavenProperty -->
+                <guru.mocker.composition.scm.url>${BITBUCKET_GIT_HTTP_ORIGIN}</guru.mocker.composition.scm.url>
+            </properties>
+        </profile>
+    </profiles>
 </project>

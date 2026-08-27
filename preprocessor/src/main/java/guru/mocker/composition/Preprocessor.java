@@ -1,7 +1,7 @@
-package com.github.preprocessor;
+package guru.mocker.composition;
 
-import com.github.preprocessor.transform.ExpressionBodyTransformer;
-import com.github.preprocessor.transform.MethodReferenceBodyTransformer;
+import guru.mocker.composition.transform.ExpressionBodyTransformer;
+import guru.mocker.composition.transform.MethodReferenceBodyTransformer;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
