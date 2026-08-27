@@ -38,7 +38,7 @@
         <dependency>
             <groupId>guru.mocker</groupId>
             <artifactId>comparator-core</artifactId>
-            <version>1.0.37-SNAPSHOT</version>
+            <version>1.0.36</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
