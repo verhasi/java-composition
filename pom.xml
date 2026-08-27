@@ -13,9 +13,42 @@
     <description>Reactor aggregator for Java Composition modules</description>
 
     <modules>
+        <module>parent</module>
         <module>preprocessor</module>
         <module>java-composition-maven-plugin</module>
         <module>integration-tests</module>
     </modules>
+
+    <scm>
+        <!--suppress UnresolvedMavenProperty -->
+        <url>${guru.mocker.composition.scm.url}</url>
+        <connection>scm:git:${project.scm.url}</connection>
+        <developerConnection>${project.scm.connection}</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <scmCommentPrefix>[maven-release-plugin][skip ci]</scmCommentPrefix>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <properties>
+                <!--suppress UnresolvedMavenProperty -->
+                <guru.mocker.composition.scm.url>${BITBUCKET_GIT_HTTP_ORIGIN}</guru.mocker.composition.scm.url>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>

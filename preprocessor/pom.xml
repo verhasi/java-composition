@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>guru.mocker</groupId>
-        <artifactId>parent</artifactId>
-        <version>1.0.20</version>
-        <relativePath/>
+        <groupId>guru.mocker.composition</groupId>
+        <artifactId>java-composition-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../parent</relativePath>
     </parent>
 
     <groupId>guru.mocker.composition</groupId>
@@ -17,17 +17,8 @@
     <name>Java Composition</name>
     <description>Source code preprocessor for Concise Method Bodies (JEP 8209434)</description>
 
-    <scm>
-        <!--suppress UnresolvedMavenProperty -->
-        <url>${guru.mocker.composition.scm.url}</url>
-        <connection>scm:git:${project.scm.url}</connection>
-        <developerConnection>${project.scm.connection}</developerConnection>
-        <tag>HEAD</tag>
-    </scm>
-
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -106,14 +97,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>release</id>
-            <properties>
-                <!--suppress UnresolvedMavenProperty -->
-                <guru.mocker.composition.scm.url>${BITBUCKET_GIT_HTTP_ORIGIN}</guru.mocker.composition.scm.url>
-            </properties>
-        </profile>
-    </profiles>
 </project>

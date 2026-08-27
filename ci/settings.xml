@@ -1,0 +1,14 @@
+<settings>
+    <servers>
+        <server>
+            <id>central</id>
+            <username>${env.OSSRH_USER_TOKEN}</username>
+            <password>${env.OSSRH_PWD_TOKEN}</password>
+        </server>
+        <server>
+            <id>central-snapshot</id>
+            <username>${env.OSSRH_USER_TOKEN}</username>
+            <password>${env.OSSRH_PWD_TOKEN}</password>
+        </server>
+    </servers>
+</settings>

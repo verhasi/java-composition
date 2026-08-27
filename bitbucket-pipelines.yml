@@ -1,0 +1,62 @@
+image: maven:3-eclipse-temurin-21
+options:
+  runtime:
+    cloud:
+      version: "3"
+clone:
+  depth: full
+
+definitions:
+  steps:
+    - step:
+        name: Templates
+        script:
+          - &import-gpg-key |
+            apt-get update && apt-get install -y gnupg
+            echo -e $MAVEN_GPG_KEY | gpg --batch --import
+          - &build-javaparser |
+            cd javaparser && ./mvnw -B clean install -DskipTests && cd ..
+          - &deploy-snapshot |
+            mvn -Prelease -B -s ci/settings.xml deploy
+          - &deploy-production |
+            mvn -Prelease -B -s ci/settings.xml release:clean release:prepare release:perform
+    - step: &build-and-test
+        name: Build and Test
+        caches:
+          - maven
+        script:
+          - *build-javaparser
+          - mvn -B verify
+    - step: &security-scan
+        name: Security Scan
+        script:
+          - pipe: atlassian/git-secrets-scan:3.2.0
+    - step: &release-snapshot
+        name: Release Snapshot
+        script:
+          - *build-javaparser
+          - *import-gpg-key
+          - *deploy-snapshot
+    - step: &release
+        name: Release Production code
+        script:
+          - *build-javaparser
+          - *import-gpg-key
+          - *deploy-production
+
+pipelines:
+  default:
+    - parallel:
+        - step: *build-and-test
+        - step: *security-scan
+  custom:
+    release-snapshot:
+      - step: *release-snapshot
+
+  branches:
+    master:
+      - parallel:
+          - step: *build-and-test
+          - step: *security-scan
+      - step: *release-snapshot
+      - step: *release

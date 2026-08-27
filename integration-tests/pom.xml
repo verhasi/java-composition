@@ -3,10 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>guru.mocker</groupId>
-        <artifactId>parent</artifactId>
-        <version>1.0.20</version>
-        <relativePath/>
+        <groupId>guru.mocker.composition</groupId>
+        <artifactId>java-composition-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../parent</relativePath>
     </parent>
 
     <groupId>guru.mocker.composition</groupId>
@@ -18,9 +18,6 @@
     <description>Integration tests for Java Composition running against the shaded JAR</description>
 
     <properties>
-        <maven.compiler.release>21</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.10.2</junit.version>
         <maven.deploy.skip>true</maven.deploy.skip>
         <maven.install.skip>true</maven.install.skip>
     </properties>
