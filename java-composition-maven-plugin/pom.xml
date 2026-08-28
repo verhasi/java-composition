@@ -9,9 +9,7 @@
         <relativePath>../parent</relativePath>
     </parent>
 
-    <groupId>guru.mocker.composition</groupId>
     <artifactId>java-composition-maven-plugin</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
     <packaging>maven-plugin</packaging>
 
     <name>Java Composition - Maven Plugin</name>

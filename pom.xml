@@ -1,16 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>guru.mocker</groupId>
+        <artifactId>parent</artifactId>
+        <version>1.0.20</version>
+    </parent>
 
     <groupId>guru.mocker.composition</groupId>
     <artifactId>java-composition-reactor</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>Java Composition - Reactor</name>
-    <description>Reactor aggregator for Java Composition modules</description>
+    <name>Java Composition</name>
+    <description>Java source code preprocessor for Concise Method Bodies (JEP 8209434),
+        a preview implementation available for Java 8, 11, 17, 21, and 25.
+    </description>
+    <url>https://github.com/verhasi/java-composition</url>
 
     <modules>
         <module>parent</module>
@@ -27,20 +34,6 @@
         <tag>HEAD</tag>
     </scm>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-release-plugin</artifactId>
-                <version>3.3.1</version>
-                <configuration>
-                    <scmCommentPrefix>[maven-release-plugin][skip ci]</scmCommentPrefix>
-                    <autoVersionSubmodules>true</autoVersionSubmodules>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
     <profiles>
         <profile>
             <id>release</id>
@@ -50,5 +43,4 @@
             </properties>
         </profile>
     </profiles>
-
 </project>

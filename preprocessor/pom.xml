@@ -9,17 +9,11 @@
         <relativePath>../parent</relativePath>
     </parent>
 
-    <groupId>guru.mocker.composition</groupId>
     <artifactId>java-composition</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Java Composition</name>
     <description>Source code preprocessor for Concise Method Bodies (JEP 8209434)</description>
-
-    <properties>
-        <maven.compiler.release>21</maven.compiler.release>
-    </properties>
 
     <dependencies>
         <dependency>
