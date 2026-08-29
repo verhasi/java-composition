@@ -82,26 +82,45 @@ Consequently, from a caught `ParseException` one **can**:
 This is genuinely useful and confirms the retention design is thin: it is exactly the
 data the in-parser `recover` already consumes (`recover` reads `p.currentToken` and
 walks the stream). But `ParseException` alone is **not** sufficient to "fill the gap,"
-for three reasons:
+for two reasons:
 
 1. **No terminator.** `Token.next` walks forward indefinitely; the exception carries no
    fragment end. To capture `-> expr ;` you must re-implement `recover`'s sync logic
    externally (skip to `;`, with brace tracking for statement-like spans) and match
    JavaParser's rules exactly, or capture the wrong span.
-2. **No tree to splice into (decisive).** The overall `parse()` **threw** — you hold a
-   `ParseException`, not a `CompilationUnit`. Even a perfectly extracted fragment has
-   nowhere to go, because the parse aborted at the top level. Only the in-parser
-   recovery path lets parsing **continue** and produce a CU with a placeholder.
-3. **Position mapping only aids whole-file re-parse.** The line/column data supports a
-   "blank the member and re-parse the whole file" strategy — the coarse, brittle,
-   double-parse approach this design explicitly sets aside.
+2. **The raw `ParseException` is internal.** The two public surfaces behave differently
+   (characterized in `UngrammaticalFragmentParsingTest`):
+   - `StaticJavaParser.parse(...)` **throws** `ParseProblemException` — you get no CU.
+   - `new JavaParser().parse(...)` does **not** throw. It returns an *unsuccessful*
+     `ParseResult` that **still contains a partial `CompilationUnit`** plus the problems.
+
+### The observed recovery shape (the real substrate)
+
+The instance surface is the important one. Given a tokenizable-but-ungrammatical body:
+
+```java
+class Example { int broken() { @ @ @ ?? >>> } }
+```
+
+`new JavaParser().parse(...)` produces:
+
+- `isSuccessful() == false`
+- `getResult().isPresent() == true` — a **partial CU**
+- The method `broken` **survives with an EMPTY body** `{ }` — the skipped tokens are
+  **discarded**
+- One `Problem`: `(line 2,col 18) Parse error. Found "@", expected "}"`
+
+So recovery already yields a partial tree with a **real, addressable hole** (the empty
+method body). This is *more favorable* than "no tree at all": the design does not need
+to create the tree or the placement slot — JavaParser already produces both. The single
+missing capability is that the skipped tokens are **thrown away** instead of being
+**retained** in that hole.
 
 **Conclusion:** `ParseException` (via `currentToken.next` + positions) carries enough to
-*reconstruct the skipped fragment's tokens* externally, but not enough to *resume the
-parse*. Filling the gap requires the parser to keep going and leave an
-`UnparsedFragment` — which cannot be achieved from the exception alone. Where the
-exception data does help: the external re-parse pass (Stage 1) can use
-`currentToken.next` to extract fragment tokens accurately.
+*reconstruct the skipped fragment's tokens* externally, and the instance surface already
+produces a *partial CU with a hole* where the fragment belongs. What is missing is
+retention: keeping the skipped tokens as an `UnparsedFragment` in that hole rather than
+discarding them. That single change is the entire proposal.
 
 ## Primary Proposal: Retained Unparsed Fragments
 
