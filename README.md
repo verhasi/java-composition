@@ -34,6 +34,54 @@ public int size() = aList::size;
 
 The preprocessor transforms concise method bodies into standard Java before compilation. Your IDE sees the concise source; `javac` sees the expanded form. Any Java version from 8 onwards.
 
+## Getting Started (Maven Plugin)
+
+The easiest way to use concise method bodies is the Maven plugin, published to Maven
+Central. Add it to your project's `pom.xml`:
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>guru.mocker.composition</groupId>
+            <artifactId>java-composition-maven-plugin</artifactId>
+            <version>0.1.0</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>preprocess</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+```
+
+That's it. The plugin binds to the `generate-sources` phase and:
+
+1. Walks your compile source roots (e.g. `src/main/java`).
+2. Transforms every `.java` file containing concise bodies into standard Java,
+   writing the result to `target/generated-sources/java-composition/…`.
+3. Copies non-`.java` files and files without concise syntax unchanged.
+4. Replaces the original source roots with the generated ones, so `javac` only ever
+   sees standard Java.
+
+Write concise method bodies anywhere in `src/main/java` and build as usual with
+`mvn compile`. The classpath needed for the `=` method-reference form is auto-detected
+from your project's compile dependencies.
+
+### Optional configuration
+
+```xml
+<configuration>
+    <!-- Disable preprocessing without removing the plugin -->
+    <skip>true</skip>
+    <!-- Override the output location (default shown) -->
+    <outputDirectory>${project.build.directory}/generated-sources/java-composition</outputDirectory>
+</configuration>
+```
+
 ## Real-World Example
 
 From the JDK's `Collections.UnmodifiableCollection` — 14 delegation methods become one-liners:
@@ -99,18 +147,33 @@ The method reference is **invoked** with the method's parameters mapped to the c
 | Constructor | `static Foo make(int a, int b) = Foo::new;` | `return new Foo(a, b);` |
 | Array creation | `static int[] create(int n) = int[]::new;` | `return new int[n];` |
 
-## API
+## Programmatic API
+
+For non-Maven use, depend on the shaded library (also on Maven Central):
+
+```xml
+<dependency>
+    <groupId>guru.mocker.composition</groupId>
+    <artifactId>java-composition</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
+The library embeds its parser with all internal dependencies relocated under
+`guru.mocker.internal.*`, so it never conflicts with a project's own JavaParser.
 
 ```java
+import guru.mocker.composition.Preprocessor;
+
 // For -> form only (no classpath needed)
-var preprocessor = new Preprocessor(sourceRoot, targetRoot);
+Preprocessor preprocessor = new Preprocessor(sourceRoot, targetRoot);
 preprocessor.process(Path.of("com/example/MyClass.java"));
 
 // For = form (classpath needed for type resolution)
-var preprocessor = new Preprocessor(sourceRoot, targetRoot, List.of(
+Preprocessor withClasspath = new Preprocessor(sourceRoot, targetRoot, List.of(
     Path.of("lib/dependency.jar")
 ));
-preprocessor.process(Path.of("com/example/MyClass.java"));
+withClasspath.process(Path.of("com/example/MyClass.java"));
 ```
 
 Files without concise syntax are copied unchanged. Files with concise syntax are parsed, transformed, and written as standard Java.
@@ -148,34 +211,40 @@ These match the JEP specification.
 ## Building
 
 ```bash
-# Build the forked JavaParser first
+# Build the forked JavaParser first (installs version 3.28.2-java-composition locally)
 cd javaparser
 ./mvnw clean install -DskipTests
 
-# Build and test the preprocessor
+# Build and test everything (preprocessor, Maven plugin, integration tests)
 cd ..
-atlas-mvn clean test -pl preprocessor
+atlas-mvn clean verify
 ```
 
 ## Project Structure
 
 ```
 java-composition/
-├── docs/                    Design documents and requirements
-├── javaparser/              Forked JavaParser (git subtree from upstream)
-│   └── javaparser-core/    Modified grammar + AST extensions
-├── preprocessor/            The preprocessor library
-│   ├── src/main/java/      Preprocessor API and transformers
-│   └── src/test/           Golden file tests (semantic comparison)
-└── pom.xml                  Parent POM
+├── docs/                            Design documents and requirements
+├── javaparser/                      Forked JavaParser (git subtree from upstream)
+│   └── javaparser-core/             Modified grammar + AST extensions
+├── parent/                          Project parent POM (inherits guru.mocker:parent)
+├── preprocessor/                    The shaded preprocessor library
+│   └── src/main/java/               Preprocessor API and transformers
+├── java-composition-maven-plugin/   Maven plugin (goal: preprocess)
+│   └── src/it/                      Invoker integration tests
+├── integration-tests/               Tests that run against the shaded artifact
+│   └── src/test/resources/golden/   Golden file tests (semantic comparison)
+└── pom.xml                          Reactor aggregator
 ```
 
 ## Roadmap
 
-- [ ] Maven plugin — preprocess sources in the `generate-sources` phase
+- [x] Shaded JAR — single dependency with relocated JavaParser (no classpath conflicts)
+- [x] Maven plugin — preprocess sources in the `generate-sources` phase
+- [x] Publish to Maven Central under `guru.mocker.composition` coordinates
+- [x] CI/CD pipeline — automated build, test, and release
+- [ ] Multi-version compatibility testing (Java 8, 11, 17, 21, 25 output targets)
 - [ ] Gradle plugin — same for Gradle builds
-- [ ] Shaded JAR — single dependency with relocated JavaParser (no classpath conflicts)
-- [ ] Publish to Maven Central under `guru.mocker` coordinates
 - [ ] IDE support — IntelliJ/VS Code plugins for syntax highlighting
 
 ## Acknowledgments
