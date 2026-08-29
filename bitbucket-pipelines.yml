@@ -43,6 +43,15 @@ definitions:
           - *build-javaparser
           - *import-gpg-key
           - *deploy-production
+    - step: &sync-dev
+        name: Sync dev from master
+        clone:
+          depth: full
+        script:
+          - git fetch origin master dev
+          - git checkout dev
+          - git merge --no-edit origin/master
+          - git push origin dev
 
 pipelines:
   default:
@@ -60,3 +69,4 @@ pipelines:
           - step: *security-scan
       - step: *release-snapshot
       - step: *release
+      - step: *sync-dev
