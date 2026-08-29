@@ -217,7 +217,7 @@ cd javaparser
 
 # Build and test everything (preprocessor, Maven plugin, integration tests)
 cd ..
-atlas-mvn clean verify
+mvn clean verify
 ```
 
 ## Project Structure
