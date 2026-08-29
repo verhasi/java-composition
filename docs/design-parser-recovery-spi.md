@@ -54,6 +54,55 @@ to `TokenMgrException`. Our concise forms use only tokens standard Java already 
 so they fail at the grammar level. This design targets the `ParseException` recovery
 path exclusively; syntax needing a genuinely new token is out of scope.
 
+## Why `ParseException` Alone Is Not Enough
+
+`ParseException` is surprisingly rich. Its fields are:
+
+```java
+public Token   currentToken;            // last token consumed successfully
+public int[][] expectedTokenSequences;  // token sequences expected at the failure
+public String[] tokenImage;             // names of token kinds
+```
+
+And `Token` is a forward-linked list:
+
+```java
+public int    kind;
+public String image;
+public int    beginLine, beginColumn, endLine, endColumn;
+public Token  next;                     // next token in the stream
+```
+
+Consequently, from a caught `ParseException` one **can**:
+
+- Reach the **first error token** via `currentToken.next` (per JavaCC's own contract).
+- **Walk forward** through the remaining tokens via `next`, `next.next`, …
+- **Locate** the failure in source via `beginLine`/`beginColumn` etc.
+
+This is genuinely useful and confirms the retention design is thin: it is exactly the
+data the in-parser `recover` already consumes (`recover` reads `p.currentToken` and
+walks the stream). But `ParseException` alone is **not** sufficient to "fill the gap,"
+for three reasons:
+
+1. **No terminator.** `Token.next` walks forward indefinitely; the exception carries no
+   fragment end. To capture `-> expr ;` you must re-implement `recover`'s sync logic
+   externally (skip to `;`, with brace tracking for statement-like spans) and match
+   JavaParser's rules exactly, or capture the wrong span.
+2. **No tree to splice into (decisive).** The overall `parse()` **threw** — you hold a
+   `ParseException`, not a `CompilationUnit`. Even a perfectly extracted fragment has
+   nowhere to go, because the parse aborted at the top level. Only the in-parser
+   recovery path lets parsing **continue** and produce a CU with a placeholder.
+3. **Position mapping only aids whole-file re-parse.** The line/column data supports a
+   "blank the member and re-parse the whole file" strategy — the coarse, brittle,
+   double-parse approach this design explicitly sets aside.
+
+**Conclusion:** `ParseException` (via `currentToken.next` + positions) carries enough to
+*reconstruct the skipped fragment's tokens* externally, but not enough to *resume the
+parse*. Filling the gap requires the parser to keep going and leave an
+`UnparsedFragment` — which cannot be achieved from the exception alone. Where the
+exception data does help: the external re-parse pass (Stage 1) can use
+`currentToken.next` to extract fragment tokens accurately.
+
 ## Primary Proposal: Retained Unparsed Fragments
 
 Instead of discarding skipped tokens into a `Problem`, recovery optionally produces a
