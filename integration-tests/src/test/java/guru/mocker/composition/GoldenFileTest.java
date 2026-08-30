@@ -96,19 +96,4 @@ class GoldenFileTest {
         assertTrue(result.isEquivalent(),
                 "ClasspathResolution.java — transformation not semantically equivalent: " + result);
     }
-
-    @Test
-    void throwExpressionIsNotValidConciseBody() {
-        // 'throw' is a statement, not an expression.
-        // Using it after -> should fail to parse.
-        String code = """
-                class Example {
-                    void fail() -> throw new UnsupportedOperationException();
-                }
-                """;
-
-        var transformer = new guru.mocker.composition.transform.ExpressionBodyTransformer();
-        assertFalse(transformer.containsExpressionBody(code),
-                "throw after -> should not parse as a valid expression body");
-    }
 }

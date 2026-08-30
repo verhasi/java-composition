@@ -4,6 +4,7 @@ import com.github.javaparser.ast.ArrayCreationLevel;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import guru.mocker.composition.ast.ConciseMethodDeclaration;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
@@ -107,8 +108,10 @@ public class MethodReferenceBodyTransformer extends ModifierVisitor<Void> {
 
     @Override
     public Visitable visit(MethodDeclaration md, Void arg) {
-        if (md.hasMethodReferenceBody()) {
-            Expression refExpr = md.getMethodReferenceBody().orElseThrow();
+        if (md instanceof ConciseMethodDeclaration
+                && ((ConciseMethodDeclaration) md).getForm() == ConciseMethodDeclaration.Form.METHOD_REF) {
+            ConciseMethodDeclaration cmd = (ConciseMethodDeclaration) md;
+            Expression refExpr = cmd.getBodyExpression();
 
             if (!(refExpr instanceof MethodReferenceExpr methodRef)) {
                 throw new IllegalStateException(
@@ -125,9 +128,11 @@ public class MethodReferenceBodyTransformer extends ModifierVisitor<Void> {
                 stmts.add(new ReturnStmt(invocation));
             }
 
-            md.setBody(new BlockStmt(stmts));
-            md.setMethodReferenceBody(null);
+            MethodDeclaration standard = cmd.toStandardMethod();
+            standard.setBody(new BlockStmt(stmts));
+            md.replace(standard);
             transformed = true;
+            return standard;
         }
         return super.visit(md, arg);
     }

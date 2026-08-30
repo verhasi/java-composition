@@ -19,14 +19,12 @@
         <dependency>
             <groupId>com.github.javaparser</groupId>
             <artifactId>javaparser-core</artifactId>
-            <version>3.28.2-java-composition</version>
-            <classifier>java-composition</classifier>
+            <version>3.28.2-java-composition-recovery</version>
         </dependency>
         <dependency>
             <groupId>com.github.javaparser</groupId>
             <artifactId>javaparser-symbol-solver-core</artifactId>
-            <version>3.28.2-java-composition</version>
-            <classifier>java-composition</classifier>
+            <version>3.28.2-java-composition-recovery</version>
         </dependency>
     </dependencies>
 
@@ -56,7 +54,7 @@
                             <relocations>
                                 <relocation>
                                     <pattern>com.github.javaparser</pattern>
-                                    <shadedPattern>guru.mocker.internal.javaparser</shadedPattern>
+                                    <shadedPattern>guru.mocker.internal.recovery.javaparser</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>javassist</pattern>

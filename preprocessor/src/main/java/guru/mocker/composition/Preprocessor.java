@@ -2,6 +2,8 @@ package guru.mocker.composition;
 
 import guru.mocker.composition.transform.ExpressionBodyTransformer;
 import guru.mocker.composition.transform.MethodReferenceBodyTransformer;
+import guru.mocker.composition.transform.ConciseRecognitionProcessor;
+import guru.mocker.composition.ast.ConciseMethodDeclaration;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
@@ -67,6 +69,10 @@ public class Preprocessor {
 
         ParserConfiguration config = new ParserConfiguration();
         config.setSymbolResolver(new JavaSymbolSolver(typeSolver));
+        // Stage 1: retain unparsable concise bodies as UnparsedBlockStatement.
+        config.setRetainUnparsedTokens(true);
+        // Stage 2: recognize retained bodies as ConciseMethodDeclaration during parsing.
+        config.getProcessors().add(ConciseRecognitionProcessor::new);
         this.parser = new JavaParser(config);
     }
 
@@ -126,27 +132,19 @@ public class Preprocessor {
 
         CompilationUnit cu = parseResult.getResult().get();
 
-        // Check if any concise bodies exist
-        boolean hasExpressionBodies = cu.findAll(MethodDeclaration.class).stream()
-                .anyMatch(MethodDeclaration::hasExpressionBody);
-        boolean hasMethodReferenceBodies = cu.findAll(MethodDeclaration.class).stream()
-                .anyMatch(MethodDeclaration::hasMethodReferenceBody);
-
-        if (!hasExpressionBodies && !hasMethodReferenceBodies) {
-            // No concise syntax — copy unchanged
+        // Stage 2 already ran during parsing (ConciseRecognitionProcessor), so any concise
+        // bodies are now ConciseMethodDeclaration nodes. If there are none, copy unchanged.
+        boolean hasConcise = !cu.findAll(ConciseMethodDeclaration.class).isEmpty();
+        if (!hasConcise) {
             Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
             return;
         }
 
-        // Transform: expression bodies (-> form)
-        if (hasExpressionBodies) {
-            expressionBodyTransformer.visit(cu, null);
-        }
-
-        // Transform: method reference bodies (= form)
-        if (hasMethodReferenceBodies) {
-            methodReferenceBodyTransformer.visit(cu, null);
-        }
+        // Stage 3: expand ConciseMethodDeclaration nodes into standard MethodDeclaration.
+        // Arrow form (-> expr) is purely syntactic; method-reference form (= ref) resolves
+        // via the Symbol Solver.
+        expressionBodyTransformer.visit(cu, null);
+        methodReferenceBodyTransformer.visit(cu, null);
 
         // Write transformed output
         Files.writeString(targetFile, cu.toString());
