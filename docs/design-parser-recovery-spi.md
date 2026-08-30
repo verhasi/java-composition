@@ -119,13 +119,13 @@ missing capability is that the skipped tokens are **thrown away** instead of bei
 **Conclusion:** `ParseException` (via `currentToken.next` + positions) carries enough to
 *reconstruct the skipped fragment's tokens* externally, and the instance surface already
 produces a *partial CU with a hole* where the fragment belongs. What is missing is
-retention: keeping the skipped tokens as an `UnparsedFragment` in that hole rather than
+retention: keeping the skipped tokens as an `UnparsedBlockStatement` in that hole rather than
 discarding them. That single change is the entire proposal.
 
 ## Primary Proposal: Retained Unparsed Fragments
 
 Instead of discarding skipped tokens into a `Problem`, recovery optionally produces a
-first-class AST node — `UnparsedFragment` — that holds the skipped `TokenRange`. An
+first-class AST node — `UnparsedBlockStatement` — that holds the skipped `TokenRange`. An
 **external** pass later walks the tree, finds these nodes, re-parses their captured
 tokens with any grammar/logic it likes, and replaces them.
 
@@ -136,7 +136,7 @@ tokens with any grammar/logic it likes, and replaces them.
   the already-computed `TokenRange` in a node and continues.
 - **All interpretation moves outside JavaParser.** Concise-body expansion, Symbol Solver
   type resolution, everything happens in an external post-parse pass over
-  `UnparsedFragment` nodes — on stock JavaParser, no forked productions.
+  `UnparsedBlockStatement` nodes — on stock JavaParser, no forked productions.
 - **It matches JavaParser's existing philosophy** of lenient parsing that accumulates
   problems and keeps going. "Retain what you skipped" is a natural extension of that,
   not a new subsystem.
@@ -153,11 +153,11 @@ package com.github.javaparser.ast;
  * region the standard grammar could not parse; external tooling may re-parse the
  * captured tokens and replace this node with a valid subtree.
  *
- * <p>An UnparsedFragment is deliberately NOT valid Java on its own. Trees that may
+ * <p>An UnparsedBlockStatement is deliberately NOT valid Java on its own. Trees that may
  * contain it must be produced with the retention flag enabled and treated as
  * pending further processing.
  */
-public class UnparsedFragment extends Node {
+public class UnparsedBlockStatement extends Node {
     private TokenRange fragmentTokens;   // the skipped tokens
     // getFragmentTokens(), accept(visitor), clone(), metamodel, etc.
 }
@@ -166,18 +166,18 @@ public class UnparsedFragment extends Node {
 ### The recovery change (in `GeneratedJavaParserBase`)
 
 `recover`/`recoverStatement` already compute the skipped `TokenRange`. The change is to
-optionally construct and return an `UnparsedFragment` from it:
+optionally construct and return an `UnparsedBlockStatement` from it:
 
 ```java
 /* Configuration flag; default false => behavior identical to today. */
-boolean retainUnparsedFragments;
+boolean retainUnparsedBlockStatements;
 
 /* Node-producing recovery: when retention is on, return a fragment node holding
    the skipped tokens; otherwise behave exactly as before (skip-and-report only). */
-Optional<UnparsedFragment> recoverAsFragment(int recoveryTokenType, ParseException p) {
+Optional<UnparsedBlockStatement> recoverAsFragment(int recoveryTokenType, ParseException p) {
     TokenRange skipped = recover(recoveryTokenType, p);   // existing skip-and-report
-    if (retainUnparsedFragments && skipped != null) {
-        UnparsedFragment fragment = new UnparsedFragment(skipped);
+    if (retainUnparsedBlockStatements && skipped != null) {
+        UnparsedBlockStatement fragment = new UnparsedBlockStatement(skipped);
         return Optional.of(fragment);
     }
     return Optional.empty();
@@ -185,7 +185,7 @@ Optional<UnparsedFragment> recoverAsFragment(int recoveryTokenType, ParseExcepti
 ```
 
 Note this **reuses** the existing `recover` verbatim (including its `Problem` reporting)
-and merely wraps the already-computed `TokenRange`. When `retainUnparsedFragments` is
+and merely wraps the already-computed `TokenRange`. When `retainUnparsedBlockStatements` is
 false, the method returns empty and nothing changes.
 
 ### The grammar call site (minimal `java.jj` touch)
@@ -197,7 +197,7 @@ block installs the fragment where the hole would be:
 try {
     body = Block();
 } catch (ParseException p) {
-    Optional<UnparsedFragment> fragment = recoverAsFragment(SEMICOLON, p);
+    Optional<UnparsedBlockStatement> fragment = recoverAsFragment(SEMICOLON, p);
     if (fragment.isPresent()) {
         // place the fragment in the body slot (see "AST Modeling" below)
         bodyFragment = fragment.get();
@@ -218,8 +218,8 @@ verifying against the actual grammar per production.
 ### The external re-parse pass (lives entirely in our library)
 
 ```
-cu = stockJavaParser.parse(source, config.setRetainUnparsedFragments(true));
-for (UnparsedFragment f : cu.findAll(UnparsedFragment.class)) {
+cu = stockJavaParser.parse(source, config.setRetainUnparsedBlockStatements(true));
+for (UnparsedBlockStatement f : cu.findAll(UnparsedBlockStatement.class)) {
     Node replacement = ourFragmentParser.parseAndExpand(f.getFragmentTokens());
     f.replace(replacement);   // standard JavaParser node replacement
 }
@@ -231,7 +231,7 @@ library code operating on captured tokens.
 
 ## AST Modeling Question
 
-`UnparsedFragment` must occupy the slot where the recovered construct would have gone.
+`UnparsedBlockStatement` must occupy the slot where the recovered construct would have gone.
 For a method body, the body slot expects a `BlockStmt`. Options to align with
 maintainers:
 
@@ -240,7 +240,7 @@ maintainers:
    appear.
 2. **A dedicated optional "unparsed body" association** on the relevant declarations,
    populated only under retention. More explicit, but touches more of the metamodel.
-3. **A generic `UnparsedFragment extends Node`** with placement rules enforced by the
+3. **A generic `UnparsedBlockStatement extends Node`** with placement rules enforced by the
    productions that create it. Most general; requires care that consumers guard for it.
 
 Whichever is chosen, the node is **only present when retention is enabled**, so default
@@ -260,9 +260,9 @@ is deliberately not valid Java.
 
 ## Relation to Multi-Round Processing (Task 7)
 
-`UnparsedFragment` retention is a natural substrate for round-based processing:
+`UnparsedBlockStatement` retention is a natural substrate for round-based processing:
 
-- Each round parses with retention on, collects `UnparsedFragment` nodes, expands those
+- Each round parses with retention on, collects `UnparsedBlockStatement` nodes, expands those
   it understands, and replaces them.
 - Fragments a round cannot expand are left in place for a later round (or reported).
 - The loop terminates when a round produces no changes (no remaining fragments it can
@@ -286,7 +286,7 @@ and an optional layer could offer the in-parse handler for tools wanting single-
 
 ## Staged Delivery
 
-1. **Stage 1 — hardcoded proof.** In a minimal fork, add `UnparsedFragment`,
+1. **Stage 1 — hardcoded proof.** In a minimal fork, add `UnparsedBlockStatement`,
    `recoverAsFragment`, and wire the method-body catch block under a retention flag.
    Re-parse fragments with the concise-body logic in an external pass. Validate against
    the existing test corpus.
@@ -305,11 +305,11 @@ and an optional layer could offer the in-parse handler for tools wanting single-
 - **Recovery granularity is token-type-based.** `recover(SEMICOLON, p)` skips to the
   next `;`; for `-> expr ;` this captures exactly `-> expr`, but other constructs may
   capture more/less than a clean sub-tree. The external re-parser must tolerate this.
-- **AST placement of a deliberately-invalid node.** Introducing `UnparsedFragment` is a
+- **AST placement of a deliberately-invalid node.** Introducing `UnparsedBlockStatement` is a
   philosophical step for JavaParser; the default-off guarantee and constrained
   placement are the mitigations.
 - **Consumer awareness.** Tools consuming a retention-enabled tree must guard for
-  `UnparsedFragment` (e.g., before compilation-oriented processing). Off by default
+  `UnparsedBlockStatement` (e.g., before compilation-oriented processing). Off by default
   keeps this opt-in.
 - **`=` form type resolution.** Handled entirely in the external pass via Symbol Solver;
   not a concern for the core change.
@@ -321,7 +321,7 @@ and an optional layer could offer the in-parse handler for tools wanting single-
 
 Pursue **retained unparsed fragments** as the upstream contribution. JavaParser's
 recovery already computes the skipped `TokenRange`; the change is simply to keep it as
-an `UnparsedFragment` node under an opt-in flag, then re-parse and replace externally.
+an `UnparsedBlockStatement` node under an opt-in flag, then re-parse and replace externally.
 This is smaller and more defensible than an in-parse handler SPI, keeps all
 interpretation in our library on stock JavaParser, and provides a natural foundation for
 multi-round processing. Prototype Stage 1 against a minimal fork, then open the upstream

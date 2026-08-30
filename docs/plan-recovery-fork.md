@@ -3,7 +3,7 @@
 ## Goal
 
 Re-implement concise method bodies on top of a **minimal, general** JavaParser fork that
-retains unparsed tokens as an `UnparsedFragment` node, plus a **`Processor`** (registered
+retains unparsed tokens as an `UnparsedBlockStatement` node, plus a **`Processor`** (registered
 on `ParserConfiguration`) that expands those fragments. This replaces the current
 grammar-level fork. Both forks live side by side until the new path passes the existing
 tests unchanged; then the old fork is deleted.
@@ -13,17 +13,28 @@ tests unchanged; then the old fork is deleted.
 ```
 Source (.java with concise bodies)
    │
-   ▼  new fork: standard parse; on ParseException in a method body,
-   │            recovery retains the skipped tokens as an UnparsedFragment
-   │            (node placed in the body slot) instead of discarding them
-   ▼  ParseResult<CompilationUnit> with UnparsedFragment holes
+   ▼  STAGE 1 — Parse (new fork, general, no concise knowledge)
+   │            standard parse; where a method body cannot be parsed, recovery
+   │            retains the skipped tokens as an UnparsedBlockStatement placed in
+   │            the body slot (the exact point an empty BlockStmt goes today)
+   ▼  CompilationUnit with UnparsedBlockStatement nodes
    │
-   ▼  ConciseBodyProcessor.postProcess(result, config)   ← registered on config
-   │            finds UnparsedFragment nodes, re-parses the tokens as
-   │            `-> expr ;` / `= MethodRef ;`, builds a standard BlockStmt,
-   │            replaces the fragment (Symbol Solver for the `=` form)
-   ▼  Fully-expanded standard-Java CompilationUnit
+   ▼  STAGE 2 — Concise parsing extension (our parser layer)
+   │            find UnparsedBlockStatement nodes; for each that IS a concise method
+   │            declaration, re-parse its tokens and replace it with a typed
+   │            ConciseMethodDeclaration (our AST type, carries -> expr / = MethodRef)
+   ▼  CompilationUnit with ConciseMethodDeclaration nodes
+   │
+   ▼  STAGE 3 — Preprocessor transformation (expansion)
+   │            replace each ConciseMethodDeclaration with a 100% stock
+   │            MethodDeclaration (standard BlockStmt body; Symbol Solver for `=`)
+   ▼  Fully-expanded standard-Java CompilationUnit (no custom types remain)
 ```
+
+The pipeline deliberately separates **recognition** (Stage 2: tokens → structured concise
+node) from **transformation** (Stage 3: concise node → standard Java). Each stage is
+independently testable and replaceable. Stages 2 and 3 are *our* code; only Stage 1 lives
+in the fork.
 
 Two clean responsibilities:
 
@@ -40,7 +51,7 @@ Two clean responsibilities:
    - New fork: `3.28.2-java-composition-recovery`, shaded to
      `guru.mocker.internal.recovery.javaparser` (distinct — no collision).
 3. **Swap trigger**: the existing test suite (golden files + parsing tests) passes against
-   the new fork + `ConciseBodyProcessor` **without modifying any test**. Then delete the
+   the new fork + Stage 2/3 recognition and transformation **without modifying any test**. Then delete the
    old fork.
 4. **Expansion is a `Processor`**: external code, parser-driven, registered via
    `ParserConfiguration.getProcessors()`.
@@ -56,20 +67,20 @@ JavaParser already provides everything the "parser-driven external expansion" ne
   already use this hook.
 - **`GeneratedJavaParserBase.recover(...)` / `recoverStatement(...)`** already compute the
   skipped `TokenRange` and record a `Problem`; today they discard the tokens. The new fork
-  wraps that `TokenRange` into an `UnparsedFragment`.
+  wraps that `TokenRange` into an `UnparsedBlockStatement`.
 - Characterized behavior (`UngrammaticalFragmentParsingTest`): the instance
   `new JavaParser().parse(...)` returns an *unsuccessful* `ParseResult` with a **partial
   CU**; the failing method survives with an **empty body**. That empty body is the hole
-  the `UnparsedFragment` will occupy.
+  the `UnparsedBlockStatement` will occupy.
 
 ## Module Layout
 
 ```
 java-composition/
 ├── javaparser/                     (OLD fork — grammar-level concise bodies; deleted last)
-├── javaparser-recovery/            (NEW fork — UnparsedFragment retention only)
+├── javaparser-recovery/            (NEW fork — UnparsedBlockStatement retention only)
 ├── parent/
-├── preprocessor/                   (adds ConciseBodyProcessor; migrates off old fork)
+├── preprocessor/                   (adds Stage 2/3 recognition + transformation; off old fork)
 ├── java-composition-maven-plugin/
 ├── integration-tests/              (unchanged tests; re-pointed at new path)
 └── pom.xml
@@ -78,7 +89,7 @@ java-composition/
 The new fork is a second git subtree (or copy) of upstream `3.28.2`, with a **much smaller
 diff** than the old one: no new grammar productions, no new `MethodDeclaration` AST fields,
 no visitor changes for concise bodies — only the recovery retention and the
-`UnparsedFragment` node.
+`UnparsedBlockStatement` node.
 
 ## Task Breakdown
 
@@ -88,23 +99,29 @@ no visitor changes for concise bodies — only the recovery retention and the
 - No functional change yet — verify it builds and installs clean.
 - **Verify**: `javaparser-core-3.28.2-java-composition-recovery.jar` installs to local repo.
 
-### Task 2 — Add the `UnparsedFragment` AST node (new fork)
-- New `Node` subtype `UnparsedFragment` holding a `TokenRange` (the skipped tokens) and a
-  way to read their text/images.
-- Minimal metamodel/visitor wiring required for a new node (accept, clone, equals,
-  hashcode, metamodel entry) — mirror how an existing simple leaf node is registered.
-- **Verify**: unit test constructs an `UnparsedFragment`, round-trips through a visitor,
-  and reads back its tokens.
+### Task 2 — Add the `UnparsedBlockStatement` AST node (new fork)
+- New node `UnparsedBlockStatement **extends BlockStmt**, holding the skipped `TokenRange`
+  (the tokens) and a way to read their text/images.
+- **Modeling decision (resolved):** it extends `BlockStmt` so it fits the existing
+  method-body slot (`MethodDeclaration.body : BlockStmt`) at the *exact* position stock
+  recovery puts an empty `BlockStmt` today — **no `MethodDeclaration` change**. The name is
+  honest: it is a *block-shaped* body-slot occupant that is *unparsed*. It guarantees
+  nothing about the meaning of its tokens (Stage 2 decides that); "block" describes the
+  slot, not the content.
+- Minimal metamodel/visitor wiring for a new node (accept, clone, equals, hashcode,
+  metamodel entry) — mirror `BlockStmt`'s registration since it is the direct supertype.
+- **Verify**: unit test constructs an `UnparsedBlockStatement`, round-trips through a visitor,
+  reads back its tokens, and confirms it is assignable to a `MethodDeclaration` body slot.
 
 ### Task 3 — Node-returning recovery (new fork)
 - Add a retention flag on `ParserConfiguration` (default off → identical behavior).
 - Add `recoverAsFragment(recoveryTokenType, p)` in `GeneratedJavaParserBase`, reusing the
   existing `recover(...)` to compute the skipped `TokenRange`, wrapping it into an
-  `UnparsedFragment` when retention is on.
+  `UnparsedBlockStatement` when retention is on.
 - Touch the **method-body production** catch block in `java.jj` to call
   `recoverAsFragment` and place the fragment in the body slot when present.
 - **Verify**: parsing `int m() { @ @ @ }` with retention on yields a method whose body
-  slot holds an `UnparsedFragment` containing those tokens (adapt
+  slot holds an `UnparsedBlockStatement` containing those tokens (adapt
   `UngrammaticalFragmentParsingTest` as a new-fork unit test).
 
 ### Task 4 — Shade the new fork into a distinct package
@@ -113,21 +130,29 @@ no visitor changes for concise bodies — only the recovery retention and the
 - **Verify**: no unshaded `com.github.javaparser` classes; no collision with the old fork's
   `guru.mocker.internal.javaparser` when both are on the classpath.
 
-### Task 5 — `ConciseBodyProcessor` in the preprocessor
-- `class ConciseBodyProcessor extends Processor`:
-  - `postProcess(result, config)`: walk the CU, find `UnparsedFragment` nodes in method
-    body slots, read their tokens, recognize `-> Expression ;` / `= MethodReference ;`,
-    build a standard `BlockStmt`, and replace the fragment.
-  - `=` form uses the Symbol Solver (as today) for static/instance disambiguation.
-- Register it on the `ParserConfiguration` (with retention enabled) the preprocessor uses.
-- Reuse the existing expansion logic from `ExpressionBodyTransformer` /
-  `MethodReferenceBodyTransformer`, refactored to operate on fragment tokens rather than
-  the old dedicated AST fields.
-- **Verify**: a focused test expands both forms via the processor path.
+### Task 5 — Concise recognition + transformation in the preprocessor
+
+Implemented as two separable steps (Stages 2 and 3), both in our layer:
+
+- **`ConciseMethodDeclaration extends MethodDeclaration`** (our AST type): carries the
+  concise form (`-> expr` or `= MethodRef`). This is where the concise info lives now —
+  a subclass in our code, not fields on the fork's `MethodDeclaration`.
+- **Stage 2 — recognition** (a `Processor` registered on `ParserConfiguration`):
+  `postProcess` walks the CU, finds `UnparsedBlockStatement` nodes, and for each that IS a
+  concise method declaration, re-parses its tokens and replaces it with a
+  `ConciseMethodDeclaration`. Pure recognition — no expansion.
+- **Stage 3 — transformation**: replaces each `ConciseMethodDeclaration` with a 100% stock
+  `MethodDeclaration` (standard `BlockStmt` body). The `=` form uses the Symbol Solver for
+  static/instance disambiguation. This reuses the existing expansion logic from
+  `ExpressionBodyTransformer` / `MethodReferenceBodyTransformer`, refactored to read from
+  `ConciseMethodDeclaration` rather than the old fork's dedicated AST fields.
+- **Verify**: focused tests for each stage independently — Stage 2 (fragment →
+  `ConciseMethodDeclaration`) and Stage 3 (`ConciseMethodDeclaration` → standard
+  `MethodDeclaration`) — plus an end-to-end test through both.
 
 ### Task 6 — Re-point the preprocessor onto the new fork
 - Switch `preprocessor` dependency from the old shaded fork to the new one.
-- Parser construction: enable retention + register `ConciseBodyProcessor`.
+- Parser construction: enable retention + register the Stage 2 recognition processor.
 - Remove reliance on `MethodDeclaration.expressionBody` / `methodReferenceBody`.
 - **Verify (the swap trigger)**: the **existing** `integration-tests` suite (golden files +
   parsing tests) passes **unmodified** against the new path.
@@ -146,7 +171,7 @@ no visitor changes for concise bodies — only the recovery retention and the
 ## Verification Bar (Deletion Gate)
 
 The old fork is deleted only when: the unmodified `integration-tests` suite passes against
-the new fork + `ConciseBodyProcessor`, and full-reactor `mvn clean verify` is green. No test
+the new fork + Stage 2/3 recognition and transformation, and full-reactor `mvn clean verify` is green. No test
 changes are permitted as part of proving equivalence (per the agreed refinement).
 
 ## Risks
@@ -155,11 +180,12 @@ changes are permitted as part of proving equivalence (per the agreed refinement)
   must mirror an existing node precisely or generation breaks.
 - **Fragment boundary granularity**: `recover(SEMICOLON, ...)` captures to the next `;`;
   confirm it captures exactly `-> expr` / `= MethodRef` for the body production.
-- **Body-slot placement**: `UnparsedFragment` must be acceptable in the method-body slot
-  (modeled as/adaptable to a `BlockStmt`-compatible position) so the partial CU is well
-  formed enough for the processor to walk.
+- **Body-slot placement (resolved)**: `UnparsedBlockStatement extends BlockStmt`, so it fits
+  the `MethodDeclaration.body : BlockStmt` slot directly — no `MethodDeclaration` change. It
+  sits at the exact position stock recovery puts an empty `BlockStmt`, so the partial CU is
+  well formed for Stage 2 to walk.
 - **Two forks on the classpath during transition**: distinct relocation packages
   (`...internal.javaparser` vs `...internal.recovery.javaparser`) prevent collision; the
   preprocessor uses exactly one at a time.
-- **Processor ordering**: if the Symbol Solver is also a processor, ensure
-  `ConciseBodyProcessor` runs at the right point relative to it.
+- **Processor ordering**: if the Symbol Solver is also a processor, ensure the Stage 2
+  recognition processor runs at the right point relative to it.
