@@ -20,6 +20,7 @@
  */
 package com.github.javaparser;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -84,6 +85,39 @@ class BlockBodyRecoveryRetentionTest {
         BlockStmt body = cu.findAll(MethodDeclaration.class).get(0).getBody().get();
         assertFalse(body instanceof UnparsedBlockStatement,
                 "retention must default to off");
+    }
+
+    @Test
+    void retentionOn_conciseArrowBody_isUnparsedBlockStatement() {
+        // The concise body fails at the method-body position (no '{'), which is the
+        // method-body-position recovery path — the case concise method bodies need.
+        ParserConfiguration config = new ParserConfiguration().setRetainUnparsedTokens(true);
+        ParseResult<CompilationUnit> result =
+                new JavaParser(config).parse("class C { int size() -> items.size(); }");
+
+        assertFalse(result.isSuccessful());
+        CompilationUnit cu = result.getResult().get();
+
+        MethodDeclaration method = cu.findAll(MethodDeclaration.class).get(0);
+        assertEquals("size", method.getNameAsString(), "method signature is preserved");
+        BlockStmt body = method.getBody().get();
+        assertTrue(body instanceof UnparsedBlockStatement,
+                "concise arrow body is retained as an UnparsedBlockStatement");
+        assertTrue(body.getTokenRange().isPresent());
+    }
+
+    @Test
+    void retentionOn_conciseMethodRefBody_isUnparsedBlockStatement() {
+        ParserConfiguration config = new ParserConfiguration().setRetainUnparsedTokens(true);
+        ParseResult<CompilationUnit> result =
+                new JavaParser(config).parse("class C { int max(int a, int b) = Math::max; }");
+
+        assertFalse(result.isSuccessful());
+        CompilationUnit cu = result.getResult().get();
+
+        MethodDeclaration method = cu.findAll(MethodDeclaration.class).get(0);
+        assertEquals("max", method.getNameAsString());
+        assertTrue(method.getBody().get() instanceof UnparsedBlockStatement);
     }
 
     @Test

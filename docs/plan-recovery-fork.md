@@ -131,23 +131,34 @@ no visitor changes for concise bodies — only the recovery retention and the
 - **Verify**: unit test constructs an `UnparsedBlockStatement`, round-trips through a visitor,
   reads back its tokens, and confirms it is assignable to a `MethodDeclaration` body slot.
 
-### Task 3 — Token-retaining recovery at the block-body level (new fork)
+### Task 3 — Token-retaining recovery at the method-body position (new fork)
 - Add a retention flag on `ParserConfiguration` (default off → identical behavior).
-- Target the **block-body recovery site**: `Block()` production, `catch` block calling
-  `recover(RBRACE, e)` (currently builds an empty `BlockStmt` marked `UNPARSABLE` and
-  discards the tokens). When retention is on, build an `UnparsedBlockStatement` from the
-  skipped `TokenRange` instead of the empty block.
-- This is the level concise method bodies need (a method body is a `Block()`).
-- **Verify**: parsing `int m() { @ @ @ }` with retention on yields a method whose body
-  slot holds an `UnparsedBlockStatement` containing those tokens (adapt
-  `UngrammaticalFragmentParsingTest` as a new-fork unit test). Retention off → identical to
-  today (empty `BlockStmt`).
+- **Correction from investigation:** concise bodies (`-> expr;` / `= ref;`) fail at the
+  **method-body position** in the `MethodDeclaration` production — where `{`/`;` is
+  expected — *not* inside `Block()`. The `ParseException` there otherwise propagates to
+  the CU-level recovery and discards the whole file. So the recovery `catch` is added
+  around the method-body choice `( Block() | ";" )` in `MethodDeclaration` (Option A):
+  on failure, `recover(SEMICOLON, e)` skips to the method's terminating `;` and
+  `recoveredBlock(begin, range)` yields an `UnparsedBlockStatement` (retention on) or the
+  historical empty `BlockStmt` (off). The method signature (name, return type, params) is
+  preserved; only the body becomes the retained node.
+- Shared helper `recoveredBlock(begin, errorRange)` in `GeneratedJavaParserBase`; the
+  block-content site (`recover(RBRACE)`) also uses it, so block-content recovery retains
+  too — but the concise path is the method-body site.
+- **Verify** (`BlockBodyRecoveryRetentionTest`, 6 tests): concise `->` and `=` bodies each
+  yield a method whose signature is preserved and whose body is an `UnparsedBlockStatement`
+  with a token range; block-content `{ @ @ @ }` also retains; retention off/default is
+  identical to historical (empty `BlockStmt`); valid code is unaffected.
 
-### Task 4 — Shade the new fork into a distinct package
-- New shaded artifact relocating `com.github.javaparser` →
-  `guru.mocker.internal.recovery.javaparser`.
-- **Verify**: no unshaded `com.github.javaparser` classes; no collision with the old fork's
-  `guru.mocker.internal.javaparser` when both are on the classpath.
+### Task 4 — (folded into Task 6) Distinct relocation package
+- Shading happens in the **preprocessor** module, not the fork; the fork just publishes
+  `javaparser-core` / `javaparser-symbol-solver-core` at version
+  `3.28.2-java-composition-recovery` (plain artifacts, no classifier — verified installed).
+- The distinct relocation package (`guru.mocker.internal.recovery.javaparser`) is therefore
+  a preprocessor shade-config change realized when re-pointing (Task 6). Building a
+  throwaway shade module now would duplicate that work, so this step is folded into Task 6,
+  which verifies: no unshaded `com.github.javaparser` classes and no collision with the old
+  fork's `guru.mocker.internal.javaparser`.
 
 ### Task 5 — Concise recognition + transformation in the preprocessor
 

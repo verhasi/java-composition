@@ -2283,11 +2283,21 @@ MethodDeclaration MethodDeclaration(ModifierHolder modifier):
         throwType = AnnotatedReferenceType() { throws_ = add(throws_, throwType); }
         ("," throwType = AnnotatedReferenceType() { throws_ = add(throws_, throwType); } )*
     ]
-    (
-        body = Block()
-     |
-        ";"
-    )
+    try {
+        (
+            body = Block()
+         |
+            ";"
+        )
+    } catch (ParseException e) {
+        // The method body could not be parsed (e.g. a concise body form the standard
+        // grammar does not accept). Recover to the terminating ';' and, when token
+        // retention is enabled, retain the skipped tokens as an UnparsedBlockStatement
+        // in the body slot so external tooling can re-parse them.
+        JavaToken bodyBegin = token();
+        TokenRange errorRange = recover(SEMICOLON, e);
+        body = recoveredBlock(bodyBegin, errorRange);
+    }
 
     {
         type = juggleArrayType(type, arrayBracketPairs);
