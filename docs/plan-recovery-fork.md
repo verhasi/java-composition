@@ -66,12 +66,30 @@ JavaParser already provides everything the "parser-driven external expansion" ne
   parse → `postProcess` → return. The Symbol Solver and language-level post-processors
   already use this hook.
 - **`GeneratedJavaParserBase.recover(...)` / `recoverStatement(...)`** already compute the
-  skipped `TokenRange` and record a `Problem`; today they discard the tokens. The new fork
-  wraps that `TokenRange` into an `UnparsedBlockStatement`.
+  skipped `TokenRange` and record a `Problem`. Crucially, the four grammar call sites fall
+  into a **three-level recovery taxonomy** (verified against `java.jj`):
+
+  | Level | Call site | Method | Result today | Tokens retained? |
+  |-------|-----------|--------|--------------|------------------|
+  | Statement | Statement productions | `recoverStatement(SEMICOLON, LBRACE, RBRACE, e)` | **`UnparsableStmt(errorRange)`** | **Yes — already** |
+  | Block body | `Block()` production | `recover(RBRACE, e)` | empty `BlockStmt` marked `UNPARSABLE` | **No — discarded** |
+  | Compilation unit | top-level CU | `recover(EOF, e)` | empty `CompilationUnit` marked `UNPARSABLE` | **No — discarded** |
+
+  Key insight: JavaParser **already has a token-retaining recovery node** — `UnparsableStmt`
+  holds the `errorRange` for the statement level. This is precedent: the enhancement is to
+  extend the same courtesy to the block-body and CU levels, which currently discard tokens.
+
+  These levels have **different structural slots**, so a single `extends Node` type cannot
+  serve all three — each needs a node compatible with its position:
+  - Statement slot → `UnparsableStmt` (exists)
+  - `BlockStmt` body slot → **`UnparsedBlockStatement extends BlockStmt`** (this project's
+    Task 2 — the level concise method bodies need)
+  - `CompilationUnit` slot → a future `UnparsedCompilationUnit` (general story only)
+
 - Characterized behavior (`UngrammaticalFragmentParsingTest`): the instance
   `new JavaParser().parse(...)` returns an *unsuccessful* `ParseResult` with a **partial
-  CU**; the failing method survives with an **empty body**. That empty body is the hole
-  the `UnparsedBlockStatement` will occupy.
+  CU**; the failing method survives with an **empty body** (the block-body `recover(RBRACE)`
+  path). That empty body is the hole the `UnparsedBlockStatement` will occupy.
 
 ## Module Layout
 
@@ -113,16 +131,17 @@ no visitor changes for concise bodies — only the recovery retention and the
 - **Verify**: unit test constructs an `UnparsedBlockStatement`, round-trips through a visitor,
   reads back its tokens, and confirms it is assignable to a `MethodDeclaration` body slot.
 
-### Task 3 — Node-returning recovery (new fork)
+### Task 3 — Token-retaining recovery at the block-body level (new fork)
 - Add a retention flag on `ParserConfiguration` (default off → identical behavior).
-- Add `recoverAsFragment(recoveryTokenType, p)` in `GeneratedJavaParserBase`, reusing the
-  existing `recover(...)` to compute the skipped `TokenRange`, wrapping it into an
-  `UnparsedBlockStatement` when retention is on.
-- Touch the **method-body production** catch block in `java.jj` to call
-  `recoverAsFragment` and place the fragment in the body slot when present.
+- Target the **block-body recovery site**: `Block()` production, `catch` block calling
+  `recover(RBRACE, e)` (currently builds an empty `BlockStmt` marked `UNPARSABLE` and
+  discards the tokens). When retention is on, build an `UnparsedBlockStatement` from the
+  skipped `TokenRange` instead of the empty block.
+- This is the level concise method bodies need (a method body is a `Block()`).
 - **Verify**: parsing `int m() { @ @ @ }` with retention on yields a method whose body
   slot holds an `UnparsedBlockStatement` containing those tokens (adapt
-  `UngrammaticalFragmentParsingTest` as a new-fork unit test).
+  `UngrammaticalFragmentParsingTest` as a new-fork unit test). Retention off → identical to
+  today (empty `BlockStmt`).
 
 ### Task 4 — Shade the new fork into a distinct package
 - New shaded artifact relocating `com.github.javaparser` →
@@ -168,6 +187,29 @@ Implemented as two separable steps (Stages 2 and 3), both in our layer:
 - Update README "How It Works" and Project Structure for the recovery + Processor design.
 - Note the new fork is the upstream-contribution candidate (link the design doc).
 
+## General Recovery Story — Remaining Tasks (beyond concise bodies)
+
+These complete the *general* recovery enhancement for the upstream contribution. They are
+**not needed for concise method bodies** (which only require the block-body level, Task 2),
+so they sit at the end of the line.
+
+### Task 9 — Statement-level: confirm `UnparsableStmt` sufficiency
+- The statement recovery path (`recoverStatement`) **already** produces `UnparsableStmt`
+  holding the `errorRange` — token retention already works at this level.
+- Verify no change is needed; document `UnparsableStmt` as the statement-level precedent
+  that justifies the block-body and CU-level additions.
+- **Verify**: a characterization test showing `UnparsableStmt` retains the token range for a
+  statement-level recovery.
+
+### Task 10 — Compilation-unit level: `UnparsedCompilationUnit`
+- The CU recovery path (`recover(EOF, e)`) currently produces an empty `CompilationUnit`
+  marked `UNPARSABLE`, **discarding** the tokens.
+- Add a token-retaining variant compatible with the CU slot (e.g., a `CompilationUnit` that
+  carries the skipped `TokenRange`, or an `UnparsedCompilationUnit`), mirroring how
+  `UnparsedBlockStatement` retains at the block level.
+- **Verify**: parsing a wholly ungrammatical CU with retention on yields a CU that retains
+  the skipped tokens rather than discarding them.
+
 ## Verification Bar (Deletion Gate)
 
 The old fork is deleted only when: the unmodified `integration-tests` suite passes against
@@ -178,8 +220,8 @@ changes are permitted as part of proving equivalence (per the agreed refinement)
 
 - **New-node metamodel wiring**: adding an AST node touches metamodel/visitor generation;
   must mirror an existing node precisely or generation breaks.
-- **Fragment boundary granularity**: `recover(SEMICOLON, ...)` captures to the next `;`;
-  confirm it captures exactly `-> expr` / `= MethodRef` for the body production.
+- **Fragment boundary granularity**: `recover(RBRACE, ...)` captures to the closing brace;
+  confirm it captures exactly the concise body tokens for the block-body production.
 - **Body-slot placement (resolved)**: `UnparsedBlockStatement extends BlockStmt`, so it fits
   the `MethodDeclaration.body : BlockStmt` slot directly — no `MethodDeclaration` change. It
   sits at the exact position stock recovery puts an empty `BlockStmt`, so the partial CU is
