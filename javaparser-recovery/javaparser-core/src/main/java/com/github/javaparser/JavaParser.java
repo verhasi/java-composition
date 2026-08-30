@@ -92,6 +92,7 @@ public final class JavaParser {
         }
         astParser.setTabSize(configuration.getTabSize());
         astParser.setStoreTokens(configuration.isStoreTokens());
+        astParser.setRetainUnparsedTokens(configuration.isRetainUnparsedTokens());
         ParserConfiguration.LanguageLevel languageLevel = configuration.getLanguageLevel();
         if (languageLevel != null) {
             if (languageLevel.isYieldSupported()) {

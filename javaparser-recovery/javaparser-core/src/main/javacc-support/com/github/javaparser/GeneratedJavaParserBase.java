@@ -28,7 +28,9 @@ import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.comments.CommentsCollection;
 import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.UnparsedBlockStatement;
 import com.github.javaparser.ast.type.*;
 import com.github.javaparser.utils.Pair;
 
@@ -61,6 +63,8 @@ abstract class GeneratedJavaParserBase {
     List<Problem> problems = new ArrayList<>();
     /* Configuration flag whether we store tokens and tokenranges */
     boolean storeTokens;
+    /* Configuration flag whether recovery retains skipped tokens as UnparsedBlockStatement */
+    boolean retainUnparsedTokens;
 
     /* Resets the parser for reuse, gaining a little performance */
     void reset(Provider provider) {
@@ -181,6 +185,28 @@ abstract class GeneratedJavaParserBase {
     void setStoreTokens(boolean storeTokens) {
         this.storeTokens = storeTokens;
         getTokenSource().setStoreTokens(storeTokens);
+    }
+
+    /* Makes recovery retain skipped tokens as an UnparsedBlockStatement */
+    void setRetainUnparsedTokens(boolean retainUnparsedTokens) {
+        this.retainUnparsedTokens = retainUnparsedTokens;
+    }
+
+    /**
+     * Build the block produced by block-body error recovery. The tokens between
+     * {@code begin} and the recovery point ({@code errorRange}) could not be parsed.
+     * When token retention is enabled, returns an {@link UnparsedBlockStatement} that
+     * retains {@code errorRange}; otherwise returns an empty {@link BlockStmt} marked
+     * {@code UNPARSABLE} (the historical behavior).
+     */
+    BlockStmt recoveredBlock(JavaToken begin, TokenRange errorRange) {
+        if (retainUnparsedTokens) {
+            UnparsedBlockStatement unparsed = new UnparsedBlockStatement(range(begin, token()));
+            return unparsed;
+        }
+        BlockStmt block = new BlockStmt(range(begin, token()), new NodeList<Statement>());
+        block.setParsed(Node.Parsedness.UNPARSABLE);
+        return block;
     }
 
     /* Called from within a catch block to skip forward to a known token,

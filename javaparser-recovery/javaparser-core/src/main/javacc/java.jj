@@ -4521,10 +4521,8 @@ BlockStmt Block():
         "}"
         { return new BlockStmt(range(begin, token()), stmts); }
     } catch (ParseException e) {
-        recover(RBRACE, e);
-        BlockStmt block = new BlockStmt(range(begin, token()), new NodeList<Statement>());
-        block.setParsed(UNPARSABLE);
-        return block;
+        TokenRange errorRange = recover(RBRACE, e);
+        return recoveredBlock(begin, errorRange);
     }
 }
 

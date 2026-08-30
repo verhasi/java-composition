@@ -246,6 +246,13 @@ public class ParserConfiguration {
 
     private boolean storeTokens = true;
 
+    /**
+     * When true, error recovery retains the skipped tokens as an
+     * {@code UnparsedBlockStatement} instead of discarding them (default false,
+     * preserving the historical behavior of an empty unparsable block).
+     */
+    private boolean retainUnparsedTokens = false;
+
     private boolean attributeComments = true;
 
     private boolean doNotAssignCommentsPrecedingEmptyLines = true;
@@ -413,6 +420,21 @@ public class ParserConfiguration {
 
     public boolean isStoreTokens() {
         return storeTokens;
+    }
+
+    /**
+     * When enabled, error recovery at the block-body level retains the skipped tokens
+     * as an {@code UnparsedBlockStatement} node (in the position an empty unparsable
+     * {@code BlockStmt} would otherwise occupy), so external tooling can re-parse them.
+     * Default false — behavior is then identical to historical recovery.
+     */
+    public ParserConfiguration setRetainUnparsedTokens(boolean retainUnparsedTokens) {
+        this.retainUnparsedTokens = retainUnparsedTokens;
+        return this;
+    }
+
+    public boolean isRetainUnparsedTokens() {
+        return retainUnparsedTokens;
     }
 
     public int getTabSize() {
