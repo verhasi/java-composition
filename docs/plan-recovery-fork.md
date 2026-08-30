@@ -221,6 +221,56 @@ Implemented as two separable steps (Stages 2 and 3), both in our layer. **Design
 - The recovery fork's token-retaining recovery is noted as the upstream-contribution
   candidate; see `docs/design-parser-recovery-spi.md`.
 
+### Task 8b — Retract resolved problems + surface genuine syntax errors
+
+**Finding (verified against the fork source).** Error recovery records a `Problem` at
+*parse time* — `recover(SEMICOLON, e)` adds to the parser's `problems` list before any
+`Processor` runs. `ParseResult.isSuccessful()` is `problems.isEmpty() && result != null`
+(`ParseResult` L67-68). Our Stage 2 `ConciseRecognitionProcessor.postProcess` calls
+`node.replace(...)`, which mutates only the AST — it does **not** touch
+`result.getProblems()`. Facts confirmed:
+
+- `JavaParser` calls `processor.postProcess(result, configuration)` (L127) and then sorts
+  `result.getProblems()` in place (L129) — so the list is reachable and live from a
+  processor.
+- `ParseResult.getProblems()` returns the backing `problems` list directly (L96-98), i.e.
+  the same list `isSuccessful()` inspects — a processor **can** mutate it.
+
+**Consequence today.** After Stage 2 replaces every `UnparsedBlockStatement`, the
+`ParseResult` still carries the original recovery `Problem`s: `isSuccessful()` stays
+`false` and the stale problems point at bodies that no longer exist. `Preprocessor.process`
+does not notice because it gates on `getResult().isPresent()` (the partial CU is present),
+**not** on `isSuccessful()`. So the pipeline works, but only because it ignores the problem
+list entirely.
+
+**The latent gap.** Because we ignore all problems, we do not distinguish:
+- a problem our processor *resolved* (a concise body we recognized and replaced), from
+- a *genuine* syntax error (a body we could not interpret, or unrelated broken code).
+
+A real syntax error is currently **silently swallowed** — we emit partial/wrong output
+instead of failing. There is no independent check for genuinely unparseable parts.
+
+**Planned fix (recognition owns problem lifecycle).** When Stage 2 *successfully* replaces
+an `UnparsedBlockStatement`, it **retracts the matching `Problem`** from
+`result.getProblems()` (match by the recovery token range / position we already hold).
+Then:
+- All concise bodies recognized → problem list empties → `isSuccessful()` becomes `true`
+  *legitimately*.
+- Any `UnparsedBlockStatement` we could not interpret, or any unrelated syntax error → its
+  `Problem` **remains** → `isSuccessful()` stays `false`.
+
+`Preprocessor.process` then trusts `isSuccessful()`: leftover problems == real unparseable
+parts, surfaced as an error instead of silently mangled. This keeps parse (Stage 1),
+recognition + problem-retraction (Stage 2), and transformation (Stage 3) cleanly separated.
+
+- **Verify**: (a) a file with only concise bodies → `isSuccessful()` true after Stage 2, no
+  problems; (b) a file with a genuine syntax error (non-concise broken body) → problem
+  survives, `process` surfaces an error rather than writing wrong output; (c) all existing
+  integration tests still pass.
+- **Upstream note.** "Retain on recovery + retract on successful external replace" is a tidy
+  contract to include in the issue: the problem list becomes the authoritative record of
+  *unresolved* unparseable regions.
+
 ## General Recovery Story — Remaining Tasks (beyond concise bodies)
 
 These complete the *general* recovery enhancement for the upstream contribution. They are
