@@ -162,21 +162,40 @@ no visitor changes for concise bodies — only the recovery retention and the
 
 ### Task 5 — Concise recognition + transformation in the preprocessor
 
-Implemented as two separable steps (Stages 2 and 3), both in our layer:
+Implemented as two separable steps (Stages 2 and 3), both in our layer. **Design X**
+(agreed): Stage 2 parses the concise payload to a plain `Expression` and *we* wrap it in
+`ConciseMethodDeclaration`; Stage 3 does the actual expansion.
 
-- **`ConciseMethodDeclaration extends MethodDeclaration`** (our AST type): carries the
-  concise form (`-> expr` or `= MethodRef`). This is where the concise info lives now —
-  a subclass in our code, not fields on the fork's `MethodDeclaration`.
+- **`ConciseMethodDeclaration extends MethodDeclaration`** (our AST type): carries a parsed
+  `Expression` plus a form kind (`ARROW` for `->`, `METHOD_REF` for `=`). This is where the
+  concise info lives now — a subclass in our code, not fields on the fork's
+  `MethodDeclaration`. It is built by *us*, never by a parser.
+
 - **Stage 2 — recognition** (a `Processor` registered on `ParserConfiguration`):
-  `postProcess` walks the CU, finds `UnparsedBlockStatement` nodes, and for each that IS a
-  concise method declaration, re-parses its tokens and replaces it with a
-  `ConciseMethodDeclaration`. Pure recognition — no expansion.
+  `postProcess` walks the CU and, for each `MethodDeclaration` whose body is an
+  `UnparsedBlockStatement`:
+  1. Read the body's token range; find the marker token (`->` or `=`), skipping the leading
+     `)` and whitespace.
+  2. Classify: `->` → `ARROW`; `=` → `METHOD_REF`.
+  3. Extract the payload tokens between the marker and the trailing `;`, rebuild the text.
+     The payload is **standard Java** (e.g. `items.size()`, `Math::max`,
+     `System.out.println(s)`) — no concise syntax remains — so it parses as an ordinary
+     expression and cannot recurse into another `UnparsedBlockStatement`.
+  4. Parse the payload as an expression (the fork instance we already hold; a stock parser
+     would behave identically since the payload is standard Java) → `Expression expr`.
+  5. Build a `ConciseMethodDeclaration` from the method's signature + `expr` + form kind, and
+     replace the original `MethodDeclaration`.
+  Pure recognition — no expansion.
+
 - **Stage 3 — transformation**: replaces each `ConciseMethodDeclaration` with a 100% stock
-  `MethodDeclaration` (standard `BlockStmt` body). The `=` form uses the Symbol Solver for
-  static/instance disambiguation. This reuses the existing expansion logic from
-  `ExpressionBodyTransformer` / `MethodReferenceBodyTransformer`, refactored to read from
+  `MethodDeclaration` (standard `BlockStmt` body):
+  - `ARROW`, non-void → `{ return expr; }`; `ARROW`, void → `{ expr; }`.
+  - `METHOD_REF` → expand the reference to an invocation (Symbol Solver for static/instance
+    disambiguation), as today.
+  Reuses the existing expansion logic from `ExpressionBodyTransformer` /
+  `MethodReferenceBodyTransformer`, refactored to read the `Expression` + form kind from
   `ConciseMethodDeclaration` rather than the old fork's dedicated AST fields.
-- **Verify**: focused tests for each stage independently — Stage 2 (fragment →
+- **Verify**: focused tests for each stage independently — Stage 2 (unparsed body →
   `ConciseMethodDeclaration`) and Stage 3 (`ConciseMethodDeclaration` → standard
   `MethodDeclaration`) — plus an end-to-end test through both.
 
