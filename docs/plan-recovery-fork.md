@@ -206,16 +206,20 @@ Implemented as two separable steps (Stages 2 and 3), both in our layer. **Design
 - **Verify (the swap trigger)**: the **existing** `integration-tests` suite (golden files +
   parsing tests) passes **unmodified** against the new path.
 
-### Task 7 — Delete the old fork
-- Remove `javaparser/` (old subtree), its reactor entry, and the old
-  `3.28.2-java-composition` dependency.
-- Remove now-dead concise-body AST fields/visitor code (they lived only in the old fork).
-- Update pipeline: build `javaparser-recovery` instead of `javaparser`.
-- **Verify**: full `mvn clean verify` green with only the new fork present.
+### Task 7 — Delete the old fork ✅ DONE
+- Removed `javaparser/` (old subtree, ~70M). It had no reactor entry (both forks build
+  standalone), and no build file referenced the old `3.28.2-java-composition` dependency
+  after the Task 6 re-point.
+- Dead concise-body AST fields/visitor code lived only in the old fork — gone with it.
+- Pipeline updated: CI `build-javaparser` anchor now builds `javaparser-recovery`.
+- **Verified**: full `atlas-mvn clean verify` green with only the recovery fork present —
+  13 integration tests + 3 maven-plugin invoker ITs, BUILD SUCCESS.
 
-### Task 8 — Docs
-- Update README "How It Works" and Project Structure for the recovery + Processor design.
-- Note the new fork is the upstream-contribution candidate (link the design doc).
+### Task 8 — Docs ✅ DONE
+- README "How It Works" rewritten as the three-stage pipeline (retain → recognize →
+  transform); "Building" and "Project Structure" point to `javaparser-recovery`.
+- The recovery fork's token-retaining recovery is noted as the upstream-contribution
+  candidate; see `docs/design-parser-recovery-spi.md`.
 
 ## General Recovery Story — Remaining Tasks (beyond concise bodies)
 

@@ -15,7 +15,7 @@ definitions:
             apt-get update && apt-get install -y gnupg
             echo -e $MAVEN_GPG_KEY | gpg --batch --import
           - &build-javaparser |
-            cd javaparser && ./mvnw -B clean install -DskipTests && cd ..
+            cd javaparser-recovery && ./mvnw -B clean install -DskipTests && cd ..
           - &deploy-snapshot |
             mvn -Prelease -B -s ci/settings.xml deploy
           - &deploy-production |

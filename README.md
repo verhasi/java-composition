@@ -180,20 +180,39 @@ Files without concise syntax are copied unchanged. Files with concise syntax are
 
 ## How It Works
 
-1. A **forked JavaParser** (based on v3.28.2) extends the JavaCC grammar to parse `-> Expression ;` and `= MethodReference ;` as valid method body forms
-2. The parser stores concise bodies in dedicated AST fields without expanding them
-3. **ExpressionBodyTransformer** expands `->` forms (purely syntactic)
-4. **MethodReferenceBodyTransformer** expands `=` forms (uses JavaParser Symbol Solver for static/instance disambiguation)
-5. The transformed AST is pretty-printed as standard Java
+The preprocessor runs a **three-stage pipeline** on top of a JavaParser fork whose
+grammar is left *pristine* — the fork only gains the ability to **retain** the tokens of a
+method body it cannot parse, instead of discarding them:
+
+1. **Stage 1 — Parse & retain** (recovery fork, based on v3.28.2): a concise body
+   (`-> expr;` or `= MethodRef;`) is not valid standard Java, so the standard grammar fails
+   at the method-body position. Rather than dropping the body, the fork retains its tokens
+   as an `UnparsedBlockStatement`. Valid method bodies parse as normal `BlockStmt` nodes.
+2. **Stage 2 — Recognition** (`ConciseRecognitionProcessor`, ours): finds each method whose
+   body is an `UnparsedBlockStatement`, detects the concise marker (`->` or `=`), and parses
+   the payload — which is *standard Java* (e.g. `items.size()`, `Math::max`) — into a plain
+   expression. It wraps that in a `ConciseMethodDeclaration` (our AST node carrying the
+   parsed expression + form kind). No expansion happens here.
+3. **Stage 3 — Transformation** (ours): expands each `ConciseMethodDeclaration` into a 100%
+   standard `MethodDeclaration`. `ExpressionBodyTransformer` handles the `->` form (purely
+   syntactic); `MethodReferenceBodyTransformer` handles the `=` form (uses the JavaParser
+   Symbol Solver for static/instance disambiguation).
+4. The resulting standard AST is pretty-printed as ordinary Java.
+
+Because the grammar is untouched, the concise-specific logic lives entirely in *our* layer —
+the fork's only enhancement (token-retaining recovery) is a general capability that could be
+contributed upstream.
 
 ```
 Source .java file (with concise bodies)
     │
-    ▼ Parse (forked JavaParser)
+    ▼ Stage 1: Parse & retain (recovery fork → UnparsedBlockStatement)
     │
-    ▼ ExpressionBodyTransformer (-> form)
+    ▼ Stage 2: Recognition (→ ConciseMethodDeclaration)
     │
-    ▼ MethodReferenceBodyTransformer (= form + Symbol Solver)
+    ▼ Stage 3a: ExpressionBodyTransformer (-> form)
+    │
+    ▼ Stage 3b: MethodReferenceBodyTransformer (= form + Symbol Solver)
     │
     ▼ Pretty-print
     │
@@ -211,8 +230,9 @@ These match the JEP specification.
 ## Building
 
 ```bash
-# Build the forked JavaParser first (installs version 3.28.2-java-composition locally)
-cd javaparser
+# Build the JavaParser recovery fork first
+# (installs version 3.28.2-java-composition-recovery locally)
+cd javaparser-recovery
 ./mvnw clean install -DskipTests
 
 # Build and test everything (preprocessor, Maven plugin, integration tests)
@@ -225,11 +245,11 @@ mvn clean verify
 ```
 java-composition/
 ├── docs/                            Design documents and requirements
-├── javaparser/                      Forked JavaParser (git subtree from upstream)
-│   └── javaparser-core/             Modified grammar + AST extensions
+├── javaparser-recovery/             JavaParser recovery fork (pristine grammar)
+│   └── javaparser-core/             UnparsedBlockStatement + token retention
 ├── parent/                          Project parent POM (inherits guru.mocker:parent)
 ├── preprocessor/                    The shaded preprocessor library
-│   └── src/main/java/               Preprocessor API and transformers
+│   └── src/main/java/               Preprocessor API, recognition, transformers
 ├── java-composition-maven-plugin/   Maven plugin (goal: preprocess)
 │   └── src/it/                      Invoker integration tests
 ├── integration-tests/               Tests that run against the shaded artifact
