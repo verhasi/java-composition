@@ -20,9 +20,10 @@
  */
 package com.github.javaparser.metamodel;
 
-import com.github.javaparser.ast.Generated;
-import com.github.javaparser.ast.stmt.BlockStmt;
 import java.util.Optional;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.Generated;
+import com.github.javaparser.ast.Node;
 
 /**
  * This file, class, and its contents are completely generated based on:
@@ -39,6 +40,11 @@ public class BlockStmtMetaModel extends StatementMetaModel {
     @Generated("com.github.javaparser.generator.metamodel.NodeMetaModelGenerator")
     BlockStmtMetaModel(Optional<BaseNodeMetaModel> superBaseNodeMetaModel) {
         super(superBaseNodeMetaModel, BlockStmt.class, "BlockStmt", "com.github.javaparser.ast.stmt", false, false);
+    }
+
+    @Generated("com.github.javaparser.generator.metamodel.NodeMetaModelGenerator")
+    protected BlockStmtMetaModel(Optional<BaseNodeMetaModel> superNodeMetaModel, Class<? extends Node> type, String name, String packageName, boolean isAbstract, boolean hasWildcard) {
+        super(superNodeMetaModel, type, name, packageName, isAbstract, hasWildcard);
     }
 
     public PropertyMetaModel statementsPropertyMetaModel;

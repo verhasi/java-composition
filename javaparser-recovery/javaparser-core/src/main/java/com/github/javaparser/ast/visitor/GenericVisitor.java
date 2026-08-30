@@ -248,4 +248,6 @@ public interface GenericVisitor<R, A> {
     R visit(MatchAllPatternExpr n, A arg);
 
     R visit(MarkdownComment n, A arg);
+
+    R visit(UnparsedBlockStatement n, A arg);
 }

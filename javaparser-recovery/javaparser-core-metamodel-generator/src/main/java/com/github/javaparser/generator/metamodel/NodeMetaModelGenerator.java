@@ -133,7 +133,12 @@ public class NodeMetaModelGenerator extends AbstractGenerator {
         annotateGenerated(classMMConstructor);
 
         // ?Abstract protected constructor?
-        if (typeAnalysis.isAbstract) {
+        // Emit the extensible protected constructor for abstract types AND for any
+        // concrete node that is extended by another registered node (so the subclass
+        // metamodel can call super(...) with the full argument list).
+        boolean isExtendedByAnotherNode = MetaModelGenerator.ALL_NODE_CLASSES.stream()
+                .anyMatch(other -> other.getSuperclass() == nodeClass);
+        if (typeAnalysis.isAbstract || isExtendedByAnotherNode) {
             classMetaModelJavaFile.addImport(Node.class);
             BodyDeclaration<?> bodyDeclaration = parseBodyDeclaration(f(
                     "protected %s(Optional<%s> superNodeMetaModel, Class<? extends Node> type, String name, String packageName, boolean isAbstract, boolean hasWildcard) {"

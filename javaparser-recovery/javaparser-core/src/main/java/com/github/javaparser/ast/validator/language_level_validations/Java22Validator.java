@@ -40,63 +40,52 @@ import java.util.stream.Collectors;
  */
 public class Java22Validator extends Java21Validator {
 
-    final Validator unnamedVarOnlyWhereAllowedByJep456 =
-            new SingleNodeTypeValidator<>(SimpleName.class, (name, reporter) -> {
-                if (!name.getIdentifier().equals("_")) {
+    final Validator unnamedVarOnlyWhereAllowedByJep456 = new SingleNodeTypeValidator<>(SimpleName.class, (name, reporter) -> {
+        if (!name.getIdentifier().equals("_")) {
+            return;
+        }
+        if (reportNoParent(name, reporter)) {
+            return;
+        }
+        Node parentNode = name.getParentNode().get();
+        if (parentNode instanceof VariableDeclarator || parentNode instanceof TypePatternExpr) {
+            return;
+        }
+        if (parentNode instanceof Parameter) {
+            Parameter parameter = (Parameter) parentNode;
+            if (reportNoParent(parameter, reporter)) {
+                return;
+            }
+            Node grandParent = parameter.getParentNode().get();
+            if (grandParent instanceof CatchClause || grandParent instanceof LambdaExpr) {
+                return;
+            }
+        }
+        try {
+            ForStmt enclosingFor = (ForStmt) Navigator.demandParentNode(name, ancestor -> ancestor instanceof ForStmt);
+            if (enclosingFor.getCompare().isPresent() && enclosingFor.getCompare().get().containsWithinRange(name)) {
+                // In a for compare, so now check that it's the LHS of an assignment
+                AssignExpr enclosingAssign = (AssignExpr) Navigator.demandParentNode(name, ancestor -> ancestor instanceof AssignExpr);
+                if (enclosingAssign.getTarget().containsWithinRange(name)) {
                     return;
                 }
-                if (reportNoParent(name, reporter)) {
-                    return;
-                }
-                Node parentNode = name.getParentNode().get();
-                if (parentNode instanceof VariableDeclarator || parentNode instanceof TypePatternExpr) {
-                    return;
-                }
-                if (parentNode instanceof Parameter) {
-                    Parameter parameter = (Parameter) parentNode;
-                    if (reportNoParent(parameter, reporter)) {
-                        return;
-                    }
-                    Node grandParent = parameter.getParentNode().get();
-                    if (grandParent instanceof CatchClause || grandParent instanceof LambdaExpr) {
-                        return;
-                    }
-                }
-                try {
-                    ForStmt enclosingFor =
-                            (ForStmt) Navigator.demandParentNode(name, ancestor -> ancestor instanceof ForStmt);
-                    if (enclosingFor.getCompare().isPresent()
-                            && enclosingFor.getCompare().get().containsWithinRange(name)) {
-                        // In a for compare, so now check that it's the LHS of an assignment
-                        AssignExpr enclosingAssign = (AssignExpr)
-                                Navigator.demandParentNode(name, ancestor -> ancestor instanceof AssignExpr);
-                        if (enclosingAssign.getTarget().containsWithinRange(name)) {
-                            return;
-                        }
-                    }
-                } catch (IllegalStateException e) {
-                    // Didn't find a ForStmt ancestor, so the "_" identifier should not be allowed here.
-                }
-                reporter.report(name, "Unnamed variables only supported in cases described by JEP456");
-            });
+            }
+        } catch (IllegalStateException e) {
+            // Didn't find a ForStmt ancestor, so the "_" identifier should not be allowed here.
+        }
+        reporter.report(name, "Unnamed variables only supported in cases described by JEP456");
+    });
 
-    final Validator matchAllPatternNotTopLevel =
-            new SingleNodeTypeValidator<>(MatchAllPatternExpr.class, (patternExpr, reporter) -> {
-                if (!patternExpr.getParentNode().isPresent()
-                        || !(patternExpr.getParentNode().get() instanceof PatternExpr)) {
-                    reporter.report(patternExpr, "MatchAllPatternExpr cannot be used as a top-level pattern");
-                }
-            });
+    final Validator matchAllPatternNotTopLevel = new SingleNodeTypeValidator<>(MatchAllPatternExpr.class, (patternExpr, reporter) -> {
+        if (!patternExpr.getParentNode().isPresent() || !(patternExpr.getParentNode().get() instanceof PatternExpr)) {
+            reporter.report(patternExpr, "MatchAllPatternExpr cannot be used as a top-level pattern");
+        }
+    });
 
     final Validator noNamedVarsInMultiPatternCase = new SingleNodeTypeValidator<>(SwitchEntry.class, (n, reporter) -> {
-        List<Expression> patternLabels = n.getLabels().stream()
-                .filter(Expression::isComponentPatternExpr)
-                .collect(Collectors.toList());
+        List<Expression> patternLabels = n.getLabels().stream().filter(Expression::isComponentPatternExpr).collect(Collectors.toList());
         if (patternLabels.size() > 1) {
-            patternLabels.stream()
-                    .filter(Java22Validator::declaresNamedPatternVar)
-                    .forEach(label -> reporter.report(
-                            label, "Multiple patterns in case labels may not declare any pattern variables."));
+            patternLabels.stream().filter(Java22Validator::declaresNamedPatternVar).forEach(label -> reporter.report(label, "Multiple patterns in case labels may not declare any pattern variables."));
         }
     });
 
@@ -105,8 +94,7 @@ public class Java22Validator extends Java21Validator {
             return !((TypePatternExpr) expr).getName().getIdentifier().equals("_");
         }
         if (expr instanceof RecordPatternExpr) {
-            return ((RecordPatternExpr) expr)
-                    .getPatternList().stream().anyMatch(Java22Validator::declaresNamedPatternVar);
+            return ((RecordPatternExpr) expr).getPatternList().stream().anyMatch(Java22Validator::declaresNamedPatternVar);
         }
         return false;
     }

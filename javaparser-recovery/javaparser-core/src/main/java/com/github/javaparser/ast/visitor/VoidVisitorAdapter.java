@@ -772,4 +772,10 @@ public abstract class VoidVisitorAdapter<A> implements VoidVisitor<A> {
     public void visit(final MarkdownComment n, final A arg) {
         n.getComment().ifPresent(l -> l.accept(this, arg));
     }
+
+    @Override
+    public void visit(final UnparsedBlockStatement n, final A arg) {
+        n.getStatements().forEach(p -> p.accept(this, arg));
+        n.getComment().ifPresent(l -> l.accept(this, arg));
+    }
 }

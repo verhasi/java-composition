@@ -55,7 +55,7 @@ public class MetaModelGenerator extends AbstractGenerator {
     /**
      * Note that order of this list is manually set and maintained.
      */
-    private static final List<Class<? extends Node>> ALL_NODE_CLASSES = new ArrayList<Class<? extends Node>>() {
+    static final List<Class<? extends Node>> ALL_NODE_CLASSES = new ArrayList<Class<? extends Node>>() {
         {
             /* Base classes go first, so we don't have to do any sorting to make sure
             generated classes can refer to their base generated classes without
@@ -176,6 +176,7 @@ public class MetaModelGenerator extends AbstractGenerator {
             add(com.github.javaparser.ast.stmt.ThrowStmt.class);
             add(com.github.javaparser.ast.stmt.TryStmt.class);
             add(com.github.javaparser.ast.stmt.UnparsableStmt.class);
+            add(com.github.javaparser.ast.stmt.UnparsedBlockStatement.class);
             add(com.github.javaparser.ast.stmt.WhileStmt.class);
             add(com.github.javaparser.ast.stmt.YieldStmt.class);
 

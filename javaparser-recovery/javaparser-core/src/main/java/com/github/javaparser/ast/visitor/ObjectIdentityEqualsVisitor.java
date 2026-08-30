@@ -558,4 +558,9 @@ public class ObjectIdentityEqualsVisitor implements GenericVisitor<Boolean, Visi
     public Boolean visit(final MarkdownComment n, final Visitable arg) {
         return n == arg;
     }
+
+    @Override
+    public Boolean visit(final UnparsedBlockStatement n, final Visitable arg) {
+        return n == arg;
+    }
 }

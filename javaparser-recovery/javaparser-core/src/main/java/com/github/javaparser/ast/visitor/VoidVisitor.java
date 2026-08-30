@@ -243,4 +243,6 @@ public interface VoidVisitor<A> {
     void visit(MatchAllPatternExpr n, A arg);
 
     void visit(MarkdownComment n, A arg);
+
+    void visit(UnparsedBlockStatement n, A arg);
 }

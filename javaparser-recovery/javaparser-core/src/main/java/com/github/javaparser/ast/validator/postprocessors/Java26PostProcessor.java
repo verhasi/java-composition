@@ -23,4 +23,5 @@ package com.github.javaparser.ast.validator.postprocessors;
 /**
  * Post-processor for Java 26 language features.
  */
-public class Java26PostProcessor extends Java25PostProcessor {}
+public class Java26PostProcessor extends Java25PostProcessor {
+}
