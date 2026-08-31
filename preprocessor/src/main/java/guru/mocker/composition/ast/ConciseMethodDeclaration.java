@@ -49,6 +49,14 @@ public class ConciseMethodDeclaration extends MethodDeclaration {
     /**
      * Build a plain {@link MethodDeclaration} with this method's signature (no body).
      * Stage 3 sets the expanded standard body on the returned node.
+     *
+     * <p>Why not just {@code setBody(...)} on {@code this} and leave it in the tree?
+     * Because the pipeline keys on the concrete type: {@code findAll(
+     * ConciseMethodDeclaration.class)} detects pending work and each Stage 3 transformer
+     * guards with {@code instanceof ConciseMethodDeclaration}. Replacing the node with a
+     * plain {@link MethodDeclaration} erases that identity on expansion, so a
+     * {@code ConciseMethodDeclaration} in the tree always means "not yet expanded" and the
+     * post-Stage-3 tree is guaranteed to contain none — i.e. 100% stock nodes.
      */
     public MethodDeclaration toStandardMethod() {
         MethodDeclaration standard = new MethodDeclaration();
