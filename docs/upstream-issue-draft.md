@@ -1,7 +1,10 @@
 # Upstream issue draft — JavaParser enhancement
 
+> **FILED:** https://github.com/javaparser/javaparser/issues/5114 (2026-08-31, author `verhasi`).
+> Body posted from the `## Summary` section onward; the preamble/Title/Labels headers below
+> were stripped. Kept here as the source of record.
+>
 > Target repo: `javaparser/javaparser` (GitHub Issues → *Feature request*).
-> This file is a reviewable draft. Nothing is posted until you say so.
 
 ---
 
