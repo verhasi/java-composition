@@ -123,6 +123,7 @@ public final class JavaParser {
         try {
             N resultNode = start.parse(parser);
             ParseResult<N> result = new ParseResult<>(resultNode, parser.problems, parser.getCommentsCollection());
+            resolveProblems(result);
             for (Processor processor : processors) {
                 processor.postProcess(result, configuration);
             }
@@ -139,6 +140,30 @@ public final class JavaParser {
                 // Since we're done parsing and have our result, we don't care about any errors.
             }
         }
+    }
+
+    /**
+     * Runs any registered {@link ProblemResolver}s over the recorded problems. The parser
+     * owns the problem list: for each problem, the first resolver that reports it resolved
+     * causes the parser to remove that problem. Resolvers never mutate the list themselves.
+     * When no resolvers are registered, this is a no-op and the list is untouched.
+     */
+    private void resolveProblems(ParseResult<? extends Node> result) {
+        List<ProblemResolver> resolvers =
+                configuration.getProblemResolvers().stream().map(Supplier::get).collect(toList());
+        if (resolvers.isEmpty()) {
+            return;
+        }
+        result.getProblems().removeIf(problem -> isResolved(result, problem, resolvers));
+    }
+
+    private boolean isResolved(ParseResult<? extends Node> result, Problem problem, List<ProblemResolver> resolvers) {
+        for (ProblemResolver resolver : resolvers) {
+            if (resolver.isProblemResolved(result, configuration, problem)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

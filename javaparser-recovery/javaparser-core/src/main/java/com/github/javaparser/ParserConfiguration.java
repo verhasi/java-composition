@@ -273,6 +273,8 @@ public class ParserConfiguration {
 
     private final List<Supplier<Processor>> processors = new ArrayList<>();
 
+    private final List<Supplier<ProblemResolver>> problemResolvers = new ArrayList<>();
+
     private class UnicodeEscapeProcessor extends Processor {
 
         private UnicodeEscapeProcessingProvider _unicodeDecoder;
@@ -481,6 +483,10 @@ public class ParserConfiguration {
 
     public List<Supplier<Processor>> getProcessors() {
         return processors;
+    }
+
+    public List<Supplier<ProblemResolver>> getProblemResolvers() {
+        return problemResolvers;
     }
 
     public ParserConfiguration setLanguageLevel(LanguageLevel languageLevel) {
