@@ -250,14 +250,18 @@ list entirely.
 A real syntax error is currently **silently swallowed** — we emit partial/wrong output
 instead of failing. There is no independent check for genuinely unparseable parts.
 
-**Planned fix (recognition owns problem lifecycle).** When Stage 2 *successfully* replaces
-an `UnparsedBlockStatement`, it **retracts the matching `Problem`** from
-`result.getProblems()` (match by the recovery token range / position we already hold).
-Then:
-- All concise bodies recognized → problem list empties → `isSuccessful()` becomes `true`
-  *legitimately*.
-- Any `UnparsedBlockStatement` we could not interpret, or any unrelated syntax error → its
-  `Problem` **remains** → `isSuccessful()` stays `false`.
+**Planned fix (ProblemResolver SPI — Design P, refined).** Introduce a
+`ProblemResolver` interface in the recovery fork (`boolean isProblemResolved(ParseResult,
+ParserConfiguration, Problem)`). The parser owns the problem list and is the only party that
+removes entries: after parsing and before `Processor`s, it iterates problems and for each
+calls registered resolvers; on `true`, the **parser** removes the problem. The resolver
+never touches the list (ownership principle: the parser owns mutation, the resolver provides
+policy). See `docs/design-parser-recovery-spi.md` §"Companion SPI: ProblemResolver."
+
+Our `ConciseRecognitionProcessor` becomes a `ProblemResolver` (or a separate implementation):
+given a `Problem`, find the `UnparsedBlockStatement` at `problem.getLocation()`, recognize
+it, replace with `ConciseMethodDeclaration`, and return `true` — or `false` if it's not a
+concise body (leave the problem for another resolver or as a real error).
 
 `Preprocessor.process` then trusts `isSuccessful()`: leftover problems == real unparseable
 parts, surfaced as an error instead of silently mangled. This keeps parse (Stage 1),

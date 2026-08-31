@@ -326,3 +326,122 @@ This is smaller and more defensible than an in-parse handler SPI, keeps all
 interpretation in our library on stock JavaParser, and provides a natural foundation for
 multi-round processing. Prototype Stage 1 against a minimal fork, then open the upstream
 discussion with concise method bodies as the reference case.
+
+
+---
+
+## Companion SPI: `ProblemResolver` (parser-owned problem resolution)
+
+Fragment retention (above) keeps skipped tokens as `UnparsedBlockStatement` nodes and lets
+an external pass replace them. But the recovery that produced each fragment also recorded a
+`Problem`, and `ParseResult.isSuccessful()` is `problems.isEmpty() && result != null`.
+So after an external pass has *resolved* a fragment, the corresponding `Problem` is stale:
+the result still reports `isSuccessful() == false`, and there is no clean way to tell a
+*resolved* problem apart from a *genuine* unresolved syntax error.
+
+### The ownership principle
+
+The parser is the **owner** of the `problems` list. Handing that list to an external
+component to mutate ("renting the owner's list") is the wrong ownership model. Instead:
+
+- The parser keeps sole ownership and is the only party that adds to / removes from the list.
+- An external component is asked, **one problem at a time**, a pure question:
+  *"can you resolve this problem?"* — and returns a boolean.
+- On `true`, the **parser** removes that problem from its own list. The resolver never sees
+  or touches the list.
+
+This keeps the mechanism (list mutation) with the owner and the policy (resolvability) with
+the extension — the same relationship `Processor` already has, but for a different concern.
+
+### Why a new SPI, not a change to `Processor`
+
+`Processor` (`preProcess`/`postProcess`) is a stable, meaningfully-named SPI: it *processes*
+a whole result (comment attribution, symbol resolution, …). Overloading it with per-problem
+resolution would blur that meaning. A **separate** interface with a single, honest method is
+cleaner and additive:
+
+```java
+package com.github.javaparser;
+
+/**
+ * Asked, one Problem at a time, whether it can resolve that problem (e.g. by re-parsing
+ * and replacing a retained UnparsedBlockStatement the problem refers to). The parser owns
+ * the problem list: when this returns true, the parser removes the problem. The resolver
+ * must not mutate the problem list itself.
+ */
+@FunctionalInterface
+public interface ProblemResolver {
+    boolean isProblemResolved(ParseResult<? extends Node> result,
+                              ParserConfiguration configuration,
+                              Problem problem);
+}
+```
+
+### Registration (mirrors `Processor`)
+
+`ParserConfiguration` already holds `List<Supplier<Processor>> processors` with
+`getProcessors()`. Add the parallel:
+
+```java
+private final List<Supplier<ProblemResolver>> problemResolvers = new ArrayList<>();
+public List<Supplier<ProblemResolver>> getProblemResolvers() { return problemResolvers; }
+```
+
+### Where it runs in `JavaParser.parse` (after parse, before `Processor`s)
+
+The insertion point is exact and available. Today `parse` does:
+
+```java
+N resultNode = start.parse(parser);
+ParseResult<N> result = new ParseResult<>(resultNode, parser.problems, ...);
+// <-- ProblemResolver loop goes HERE: after the result exists, before postProcess
+for (Processor processor : processors) {
+    processor.postProcess(result, configuration);
+}
+result.getProblems().sort(PROBLEM_BY_BEGIN_POSITION);
+return result;
+```
+
+The new loop — parser-owned iteration and removal:
+
+```java
+List<ProblemResolver> resolvers = configuration.getProblemResolvers().stream()
+        .map(Supplier::get).collect(toList());
+if (!resolvers.isEmpty()) {
+    Iterator<Problem> it = result.getProblems().iterator();
+    while (it.hasNext()) {
+        Problem problem = it.next();
+        for (ProblemResolver resolver : resolvers) {
+            if (resolver.isProblemResolved(result, configuration, problem)) {
+                it.remove();          // owner removes; resolver never touches the list
+                break;
+            }
+        }
+    }
+}
+```
+
+Running **before** `Processor`s means later processors (and the caller) see an accurate
+`isSuccessful()`: resolved problems are gone; only genuine ones remain.
+
+### How our concise pipeline uses it
+
+Our recognition becomes a `ProblemResolver`: given a `Problem`, locate the
+`UnparsedBlockStatement` at `problem.getLocation()`; if it is a concise body we can
+recognize, replace it with a `ConciseMethodDeclaration` and return `true`; otherwise return
+`false` (leave the problem for someone else / as a real error). After parse:
+
+- All concise bodies resolved → problems drained → `isSuccessful()` legitimately `true`.
+- A genuinely broken body (no `->`/`=`) → unresolved → problem remains → `isSuccessful()`
+  `false` → the preprocessor surfaces a real error instead of emitting wrong output.
+
+### Guarantees
+
+- **No resolvers registered (default) → identical behavior.** The loop is skipped; the
+  problem list is untouched.
+- **Ownership preserved.** Only the parser mutates `problems`; the resolver answers a pure
+  boolean per problem.
+- **`Processor` untouched.** New, separately-named SPI; no change to existing contracts.
+- **Composes with retention.** Retention produces the `UnparsedBlockStatement` + `Problem`;
+  `ProblemResolver` is the tidy counterpart that retires the `Problem` when the fragment is
+  resolved. "Retain on recovery, retract on resolve" is a complete, symmetric story.
