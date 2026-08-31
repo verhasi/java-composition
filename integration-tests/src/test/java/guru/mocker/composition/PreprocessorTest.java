@@ -75,4 +75,33 @@ class PreprocessorTest {
         assertThrows(IllegalArgumentException.class, () ->
                 preprocessor.process(relativeFile));
     }
+
+    @Test
+    void conciseOnlyFileIsRecognizedAndWritten(@TempDir Path targetRoot) throws IOException {
+        // A file whose ONLY non-standard bodies are concise forms must be resolved cleanly
+        // (all recovery problems retracted by the ProblemResolver) and written out.
+        Preprocessor preprocessor = new Preprocessor(SOURCE_ROOT, targetRoot);
+        Path relativeFile = Path.of("com/example/Greeting.java");
+
+        preprocessor.process(relativeFile);
+
+        Path outputFile = targetRoot.resolve(relativeFile);
+        assertTrue(Files.exists(outputFile), "Concise-only file should be recognized and written");
+    }
+
+    @Test
+    void genuineSyntaxErrorIsSurfacedNotSilentlySwallowed(@TempDir Path targetRoot) {
+        // A genuinely broken (non-concise) body leaves an unresolved problem, so the parse
+        // stays unsuccessful and the preprocessor must fail loudly rather than emit output.
+        Preprocessor preprocessor = new Preprocessor(SOURCE_ROOT, targetRoot);
+        Path relativeFile = Path.of("com/example/Broken.java");
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                preprocessor.process(relativeFile));
+        assertTrue(ex.getMessage().contains("Broken.java"),
+                "Error should name the offending file");
+
+        Path outputFile = targetRoot.resolve(relativeFile);
+        assertFalse(Files.exists(outputFile), "No output should be written for a genuine syntax error");
+    }
 }

@@ -69,10 +69,15 @@ public class Preprocessor {
 
         ParserConfiguration config = new ParserConfiguration();
         config.setSymbolResolver(new JavaSymbolSolver(typeSolver));
+        // Parse modern input syntax (records, patterns, switch expressions, ...). This is the
+        // level we PARSE at; the emitted output is standard Java text usable on any target.
+        config.setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_25);
         // Stage 1: retain unparsable concise bodies as UnparsedBlockStatement.
         config.setRetainUnparsedTokens(true);
         // Stage 2: recognize retained bodies as ConciseMethodDeclaration during parsing.
-        config.getProcessors().add(ConciseRecognitionProcessor::new);
+        // Registered as a ProblemResolver so the parser drops the recovery Problem when a
+        // concise body is recognized — leaving genuine syntax errors as unresolved problems.
+        config.getProblemResolvers().add(ConciseRecognitionProcessor::new);
         this.parser = new JavaParser(config);
     }
 
@@ -122,12 +127,21 @@ public class Preprocessor {
         // Read source file
         String source = Files.readString(sourceFile);
 
-        // Parse
+        // Parse. Stage 2 (ConciseRecognitionProcessor, a ProblemResolver) runs inside the
+        // parser: it drops the recovery Problem for every concise body it recognizes. So any
+        // problem that REMAINS is a genuine syntax error, and isSuccessful() is authoritative.
         ParseResult<CompilationUnit> parseResult = parser.parse(source);
         if (!parseResult.getResult().isPresent()) {
-            // Can't parse — copy unchanged
+            // No AST at all — copy unchanged rather than lose the file.
             Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
             return;
+        }
+        if (!parseResult.isSuccessful()) {
+            // A real, unresolved syntax error (not a concise body). Fail loudly instead of
+            // emitting partial/wrong output.
+            throw new IllegalStateException(
+                    "Cannot preprocess " + relativeSourceFile + " — unresolved syntax error(s): "
+                            + parseResult.getProblems());
         }
 
         CompilationUnit cu = parseResult.getResult().get();

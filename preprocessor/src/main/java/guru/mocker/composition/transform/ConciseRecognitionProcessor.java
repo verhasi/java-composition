@@ -3,7 +3,10 @@ package guru.mocker.composition.transform;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.JavaToken;
 import com.github.javaparser.ParseResult;
-import com.github.javaparser.Processor;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.Position;
+import com.github.javaparser.Problem;
+import com.github.javaparser.ProblemResolver;
 import com.github.javaparser.TokenRange;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -11,46 +14,78 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.stmt.UnparsedBlockStatement;
 import guru.mocker.composition.ast.ConciseMethodDeclaration;
 
-import java.util.List;
+import java.util.Optional;
 
 /**
- * Stage 2 — recognition.
+ * Stage 2 — recognition, as a {@link ProblemResolver}.
  *
- * <p>A JavaParser {@link Processor} that runs after parsing. For every
- * {@link MethodDeclaration} whose body was retained as an
- * {@link UnparsedBlockStatement} (because the standard grammar could not parse a
- * concise body), it recognizes the concise form, parses the (standard-Java) payload
- * expression, and replaces the method with a {@link ConciseMethodDeclaration}.
+ * <p>The recovery fork records a {@link Problem} at each method body it could not parse and
+ * retains the skipped tokens as an {@link UnparsedBlockStatement}. This resolver is asked,
+ * one problem at a time: it locates the {@code UnparsedBlockStatement} the problem refers to,
+ * and if that body is a concise form ({@code -> expr} or {@code = ref}), parses the payload
+ * and replaces the method with a {@link ConciseMethodDeclaration}, returning {@code true}.
  *
- * <p>This performs recognition only; expansion to a standard body is Stage 3.
+ * <p>Returning {@code true} tells the parser (the owner of the problem list) to drop the
+ * problem, so a file whose only "errors" are concise bodies parses <em>successfully</em>.
+ * A genuinely broken body has no concise marker: this returns {@code false}, the problem
+ * survives, and the parse stays unsuccessful — surfacing a real syntax error rather than
+ * silently emitting wrong output.
  */
-public class ConciseRecognitionProcessor extends Processor {
+public class ConciseRecognitionProcessor implements ProblemResolver {
 
     private final JavaParser expressionParser = new JavaParser();
 
     @Override
-    public void postProcess(ParseResult<? extends Node> result, com.github.javaparser.ParserConfiguration configuration) {
-        result.getResult().ifPresent(root ->
-                root.findAll(MethodDeclaration.class).forEach(this::recognizeIfConcise));
+    public boolean isProblemResolved(ParseResult<? extends Node> result,
+                                     ParserConfiguration configuration,
+                                     Problem problem) {
+        return result.getResult()
+                .flatMap(root -> findUnparsedBodyFor(root, problem))
+                .map(this::recognizeAndReplace)
+                .orElse(false);
     }
 
-    private void recognizeIfConcise(MethodDeclaration method) {
-        if (!(method.getBody().orElse(null) instanceof UnparsedBlockStatement)) {
-            return;
+    /**
+     * Find the concise-bodied method whose retained body ({@link UnparsedBlockStatement})
+     * covers the position this problem points at.
+     */
+    private Optional<MethodDeclaration> findUnparsedBodyFor(Node root, Problem problem) {
+        Position errorPos = problem.getLocation()
+                .flatMap(TokenRange::toRange)
+                .map(range -> range.begin)
+                .orElse(null);
+        if (errorPos == null) {
+            return Optional.empty();
         }
+        return root.findAll(MethodDeclaration.class).stream()
+                .filter(method -> method.getBody().orElse(null) instanceof UnparsedBlockStatement)
+                .filter(method -> bodyCovers(method, errorPos))
+                .findFirst();
+    }
+
+    private boolean bodyCovers(MethodDeclaration method, Position errorPos) {
+        return method.getBody()
+                .flatMap(Node::getRange)
+                .map(range -> range.contains(errorPos) || range.begin.equals(errorPos))
+                .orElse(false);
+    }
+
+    /**
+     * Recognize the concise body and replace the method with a {@link ConciseMethodDeclaration}.
+     * @return true if it was a concise body and was replaced; false otherwise
+     */
+    private boolean recognizeAndReplace(MethodDeclaration method) {
         UnparsedBlockStatement unparsed = (UnparsedBlockStatement) method.getBody().get();
         TokenRange range = unparsed.getTokenRange().orElse(null);
         if (range == null) {
-            return;
+            return false;
         }
-
         Concise concise = parseConcise(range);
         if (concise == null) {
-            return;
+            return false;
         }
-
-        ConciseMethodDeclaration replacement = buildConciseMethod(method, concise);
-        method.replace(replacement);
+        method.replace(buildConciseMethod(method, concise));
+        return true;
     }
 
     /**
