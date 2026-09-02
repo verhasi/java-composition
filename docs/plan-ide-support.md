@@ -40,12 +40,19 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
 
 ## Phase A — Baseline editing support (highlight + error suppression)
 
-### Task A1 — Vim/Neovim syntax (quick win, do first)
-- `after/syntax/java.vim`: match `)\s*(->|=)` and color the marker as `Operator`; map the
-  payload to standard expression scopes.
-- Neovim Tree-sitter query (`queries/java/highlights.scm`) targeting the concise marker.
-- **Effort**: <1 hour. **Verify**: open a concise `.java` in Vim/Neovim, markers colored,
-  file not visually broken.
+### Task A1 — Vim/Neovim syntax (quick win, do first) ✅ DONE
+- `editors/vim/after/syntax/java.vim`: highlights the concise markers `->` and `=` in
+  method-body position (color `Operator`) and the payload via standard Java token groups.
+  The `=` marker is anchored on a preceding `)` so ordinary assignments are never matched.
+- Neovim Tree-sitter query — still TODO (see below); the legacy `after/syntax` file works in
+  Neovim too via `~/.config/nvim/after/syntax/java.vim`.
+- `editors/vim/README.md` documents install (Vim + Neovim) and verification.
+- **Verified**: with the file auto-loaded from `~/.vim/after/syntax/`, `synID` reports
+  `javaConciseMarker` on `->`/`=`, `javaConciseArrowBody`/`javaConciseRefBody` on the
+  payload, and NOT our group on a normal `int x = 5;` assignment. Sample:
+  `editors/vim/sample-concise.java`.
+- **Remaining sub-task**: add the Neovim Tree-sitter query (`queries/java/highlights.scm`)
+  for Tree-sitter-based highlighting (Neovim/Helix/Zed).
 
 ### Task A2 — IntelliJ plugin: error suppression + highlighting
 - `HighlightErrorFilter`: suppress the `'{' expected` `PsiErrorElement` when `->`/`=`
