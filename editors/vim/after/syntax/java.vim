@@ -12,10 +12,9 @@
 "
 " Distributed with java-composition. Apache License 2.0.
 
-" Only add our rules once per buffer.
-if exists('b:current_syntax_concise')
-  finish
-endif
+" Note: no re-entrancy guard here on purpose. Vim may load syntax/java.vim (which
+" clears syntax items) more than once per buffer; this after-syntax file must be
+" free to re-add its items on every such reload, or the highlighting is lost.
 
 " The marker must sit in method-body position: after the `)` that closes the
 " parameter list and before the terminating `;`. Anchoring on a preceding `)`
@@ -42,12 +41,10 @@ syn region javaConciseRefBody
       \ contains=@javaConcisePayload
 
 " The payload between marker and `;` is ordinary Java. Reuse the standard Java
-" token groups so the expression (identifiers, calls, strings, numbers, the `::`
-" of a method reference, etc.) inherits the active theme's colors.
-syn cluster javaConcisePayload contains=javaType,javaString,javaCharacter,javaNumber,javaBoolean,javaOperator,javaConstant,javaDocComment,javaComment,javaLineComment
+" token groups so the expression (identifiers, calls, strings, numbers, and the
+" `::` method-reference operator) inherits the active theme's colors.
+syn cluster javaConcisePayload contains=javaType,javaString,javaCharacter,javaNumber,javaBoolean,javaOperator,javaMethodRef,javaConstant,javaDocComment,javaComment,javaLineComment
 
 " Color the markers as operators (theme-consistent). The payload groups above
 " carry their own standard links; the marker gets the operator color.
 hi def link javaConciseMarker Operator
-
-let b:current_syntax_concise = 1

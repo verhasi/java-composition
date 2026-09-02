@@ -47,10 +47,17 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
 - Neovim Tree-sitter query — still TODO (see below); the legacy `after/syntax` file works in
   Neovim too via `~/.config/nvim/after/syntax/java.vim`.
 - `editors/vim/README.md` documents install (Vim + Neovim) and verification.
-- **Verified**: with the file auto-loaded from `~/.vim/after/syntax/`, `synID` reports
-  `javaConciseMarker` on `->`/`=`, `javaConciseArrowBody`/`javaConciseRefBody` on the
-  payload, and NOT our group on a normal `int x = 5;` assignment. Sample:
-  `editors/vim/sample-concise.java`.
+- **Automated regression test**: `editors/vim/test/run-tests.sh` + `test/syntax_test.vim`
+  asserts (via the real auto-load path) that the 3 syntax items load, the marker links to
+  `Operator`, and the regions are anchored on a preceding `)`. Deterministic headless
+  (checks group definitions, not rendered colors — `synID` needs screen rendering and is
+  flaky headless).
+- **Bug found & fixed via the test**: an initial re-entrancy guard caused our items to be
+  cleared when the standard `java.vim` loaded a second time (common in real setups) → the
+  highlighting silently vanished. Guard removed; add-on is now re-runnable. Also added
+  `javaMethodRef` to the payload cluster so `::` in `Math::max` colors like normal Java.
+- **Verified**: `run-tests.sh` → ALL_PASS; markers/payload defined and anchored correctly.
+  Sample: `editors/vim/sample-concise.java`.
 - **Remaining sub-task**: add the Neovim Tree-sitter query (`queries/java/highlights.scm`)
   for Tree-sitter-based highlighting (Neovim/Helix/Zed).
 

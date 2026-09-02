@@ -45,7 +45,28 @@ cp editors/vim/after/syntax/java.vim ~/.config/nvim/after/syntax/java.vim
 (For Tree-sitter-based highlighting in Neovim, a Tree-sitter query variant is planned —
 see `docs/plan-ide-support.md`, Phase A.)
 
-## Verify
+## Method references
+
+The `::` in a method reference (`Math::max`) is colored using the standard `javaMethodRef`
+group, so it looks the same inside a concise body as it does anywhere else in your Java
+code. Bare identifiers around it (`Math`, `max`) follow Vim's normal Java coloring — Vim's
+standard syntax does not specially color method-reference identifiers, and this add-on stays
+consistent with that.
+
+## Automated test
+
+A regression test asserts that the add-on's syntax items load correctly (via the real
+`~/.vim/after/syntax/` auto-load path) and that the markers are anchored on a preceding `)`:
+
+```sh
+./editors/vim/test/run-tests.sh
+```
+
+It checks group definitions (deterministic headless) rather than rendered colors, guarding
+against broken patterns, renamed groups, and the reload bug where a second load of the
+standard `java.vim` could clear the add-on's items.
+
+## Verify manually
 
 Open the bundled example and confirm the markers/payload are colored:
 
