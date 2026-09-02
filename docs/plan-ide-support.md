@@ -66,6 +66,18 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
 
 ## Phase B — LSP proxy (semantic support across all LSP editors + Eclipse)
 
+### Task B0 — Shared `expandSnippet(String)` entry point (prerequisite, just-in-time)
+- Extract a small reusable API from the preprocessor that expands a **single method
+  snippet** (concise → standard Java) in-memory, independent of file I/O. The current
+  `Preprocessor.process(Path)` is file-oriented; the LSP proxy (B2) and the IntelliJ preview
+  popup (C5) both need to expand an in-editor buffer/method string instead.
+- Reuse the existing pipeline (Stage 2 recognition → Stage 3 transformation) — this is a
+  refactor to expose an entry point, not new expansion logic.
+- **Do it just-in-time**: implement when the first consumer arrives (whichever of B2 / C5 is
+  built first), not upfront. Whoever gets there first extracts it; the other reuses it.
+- **Verify**: `expandSnippet(conciseMethodText)` returns the standard-Java form; existing
+  `process(Path)` still passes all integration tests (refactored to route through it).
+
 ### Task B1 — LSP proxy skeleton
 - Thin middleware (Node/Go/Rust) between editor client and `eclipse.jdt.ls`. Pass all
   standard traffic straight through; establish the intercept points.
@@ -150,6 +162,7 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
 2. **A2 IntelliJ suppress+highlight** — biggest single user share (~72%+).
 3. **A3 LSP grammar injection** — cheap client-side highlighting for the whole LSP set.
 4. **B1–B3 LSP proxy** — unlocks semantic correctness (diagnostics/hover) for LSP + Eclipse.
+   (Extract **B0 `expandSnippet`** just-in-time here, or at C5 — whichever comes first.)
 5. **C5 preview popup** + **C1 refactoring** — high-delight, build on existing expansion logic.
 6. **D1/D2 completion** — depends on the proxy (B) and IntelliJ scope work.
 7. **C2 formatter, C3 static analysis, C4 inlay hints** — polish/adoption aids.
