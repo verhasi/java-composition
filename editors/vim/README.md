@@ -21,10 +21,60 @@ static int max(int a, int b) = Math::max;      // = colored as an operator, Math
 The `=` marker is only highlighted when it follows a method's `)` (method-body position),
 so ordinary assignments (`int x = 5;`) are never affected.
 
-## Install (Vim)
+## Install (plugin manager — recommended)
 
-Copy the syntax file into your Vim runtime's `after/syntax` directory so it extends the
-standard Java syntax:
+The add-on lives in the `editors/vim` subdirectory of this repository, laid out as a valid
+Vim/Neovim plugin root (`after/syntax/java.vim`). Point your plugin manager at that
+subdirectory and it installs directly from Git — no manual copying, updates come with the
+manager.
+
+**lazy.nvim** (Neovim) — expose the repo's `editors/vim` subdirectory on the runtimepath:
+
+```lua
+{
+  "verhasi/java-composition",
+  lazy = false,
+  init = function()
+    vim.opt.rtp:append(vim.fn.stdpath("data") .. "/lazy/java-composition/editors/vim")
+  end,
+}
+```
+
+**vim-plug** (Vim or Neovim) — uses the `rtp` option for a plugin in a subdirectory:
+
+```vim
+Plug 'verhasi/java-composition', { 'rtp': 'editors/vim' }
+```
+
+**packer.nvim** (Neovim):
+
+```lua
+use { "verhasi/java-composition", rtp = "editors/vim" }
+```
+
+**Native packages** (no manager, Vim 8+/Neovim) — clone and expose the subdir:
+
+```sh
+git clone https://github.com/verhasi/java-composition \
+  ~/.vim/pack/plugins/start/java-composition
+# then, in your vimrc:
+#   set runtimepath+=~/.vim/pack/plugins/start/java-composition/editors/vim
+```
+
+After installing, open any `.java` file with concise bodies — the markers and payload are
+highlighted.
+
+> The common mechanism behind all of these is simply putting `editors/vim` on Vim's
+> `runtimepath` (verified: with `runtimepath+=editors/vim`, the add-on's syntax items load
+> and highlight). The exact option name differs per manager (`rtp` for vim-plug/packer, an
+> `rtp:append` for lazy.nvim) because the plugin lives in a subdirectory rather than the repo
+> root. If a future dedicated plugin repo has the add-on at its root, these become a bare
+> one-liner with no subdir option.
+
+## Install (manual copy)
+
+If you prefer not to use a plugin manager, copy the single syntax file into your Vim
+runtime's `after/syntax` directory so it extends the standard Java syntax:
 
 ```sh
 mkdir -p ~/.vim/after/syntax

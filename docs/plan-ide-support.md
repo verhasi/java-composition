@@ -46,7 +46,10 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
   The `=` marker is anchored on a preceding `)` so ordinary assignments are never matched.
 - Neovim Tree-sitter query — still TODO (see below); the legacy `after/syntax` file works in
   Neovim too via `~/.config/nvim/after/syntax/java.vim`.
-- `editors/vim/README.md` documents install (Vim + Neovim) and verification.
+- `editors/vim/README.md` documents install (plugin managers + manual) and verification.
+  Plugin-manager install verified: `editors/vim` is a clean plugin root, and
+  `runtimepath+=editors/vim` loads the add-on — so lazy.nvim / vim-plug (`rtp`) / packer /
+  native packages install it from Git via the subdir, no manual copy.
 - **Automated regression test**: `editors/vim/test/run-tests.sh` + `test/syntax_test.vim`
   asserts (via the real auto-load path) that the 3 syntax items load, the marker links to
   `Operator`, and the regions are anchored on a preceding `)`. Deterministic headless
