@@ -47,9 +47,14 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
 - Neovim Tree-sitter query — still TODO (see below); the legacy `after/syntax` file works in
   Neovim too via `~/.config/nvim/after/syntax/java.vim`.
 - `editors/vim/README.md` documents install (plugin managers + manual) and verification.
-  Plugin-manager install verified: `editors/vim` is a clean plugin root, and
-  `runtimepath+=editors/vim` loads the add-on — so lazy.nvim / vim-plug (`rtp`) / packer /
-  native packages install it from Git via the subdir, no manual copy.
+  **Distribution**: published to a standalone repo `verhasi/java-composition.vim` (plugin at
+  repo root) so install is a bare one-liner (`Plug 'verhasi/java-composition.vim'`) with a
+  tiny clone — the earlier rtp-subdir-of-monorepo approach forced a full ~70M clone (~34s)
+  for a 2KB file. Model mirrors Maven Central: monorepo `editors/vim/` is the source of
+  truth; `editors/vim/deploy.sh` publishes its content to the plugin repo root (content
+  deploy, preserves the plugin repo LICENSE, excludes deploy.sh + swap/OS junk).
+  **Verified**: bare native-packages install (repo root on rtp, no rtp option) loads
+  `javaConciseMarker`.
 - **Automated regression test**: `editors/vim/test/run-tests.sh` + `test/syntax_test.vim`
   asserts (via the real auto-load path) that the 3 syntax items load, the marker links to
   `Operator`, and the regions are anchored on a preceding `)`. Deterministic headless
