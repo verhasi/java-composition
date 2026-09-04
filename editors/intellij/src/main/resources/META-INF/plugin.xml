@@ -1,0 +1,33 @@
+<idea-plugin>
+    <id>guru.mocker.composition.intellij</id>
+    <name>Java Composition (Concise Method Bodies)</name>
+    <vendor email="composition@mocker.guru" url="https://github.com/verhasi/java-composition">mocker.guru</vendor>
+
+    <description><![CDATA[
+        Editor support for concise method bodies (JEP 8209434): the <code>-&gt; expr;</code>
+        and <code>= ref;</code> forms. SPIKE build — investigates language injection and
+        error suppression. Not a finished plugin.
+    ]]></description>
+
+    <!-- Java PSI is required to observe/attach to method declarations. -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Spike: attempt to inject the concise payload as a Java expression. -->
+        <multiHostInjector implementation="guru.mocker.composition.intellij.ConcisePayloadInjector"/>
+        <!-- Spike: attempt to suppress the false "'{' expected" error on concise bodies. -->
+        <highlightErrorFilter implementation="guru.mocker.composition.intellij.ConciseErrorFilter"/>
+    </extensions>
+
+    <actions>
+        <!-- Spike helper: dump the PSI of the current file to the IDE log / a popup,
+             so we can see exactly what node holds the concise payload. -->
+        <action id="guru.mocker.composition.intellij.DumpPsiAction"
+                class="guru.mocker.composition.intellij.DumpPsiAction"
+                text="Dump PSI (Concise Spike)"
+                description="Dump the PSI tree of the current Java file for the injection spike.">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>

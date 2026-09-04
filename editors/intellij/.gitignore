@@ -1,0 +1,10 @@
+# Gradle
+.gradle/
+build/
+
+# IntelliJ Platform Gradle Plugin sandbox / caches
+.intellijPlatform/
+
+# OS / editor junk
+.DS_Store
+*.swp
