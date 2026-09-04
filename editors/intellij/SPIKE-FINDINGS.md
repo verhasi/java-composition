@@ -112,3 +112,50 @@ land in one `PsiErrorElement`, or fragment like the per-method `=` did? Does any
 parse into usable PSI? Append a short table here per family. (Left unfilled until observed;
 this is intelligence-gathering for Phase 3, not part of the A2 build.)
 
+### Observed results (sandbox IDEA Community 2024.3)
+
+**Overall pattern:** unlike the per-method `->` form (which recovers into ONE
+`PsiErrorElement` with a fully-parsed payload), every class-body-level wildcard declaration
+**fragments** into a scattered sibling run:
+- type-position names (`Map`, `List`, `store`, `items`, method names) → stray
+  `PsiTypeElement` + `PsiJavaCodeReferenceElement` (they DO resolve as references);
+- punctuation `:: * [ ] , =` → small `PsiErrorElement`s, oddly grouped
+  (e.g. `'::* ='`, `']::* ='`, `'::['`);
+- trailing `;` → clean `SEMICOLON` sibling;
+- empty `PsiErrorElement`s (range x,x) at boundaries.
+- **No wildcard node is a `PsiLanguageInjectionHost`** → injection dead for these too.
+
+| Family | Form | Recovery shape |
+|---|---|---|
+| A | `size() = store::size` | per-method `=`: header method + trailing empty error; then `=` error, `store` type, `::` error, `size` type — fragmented (matches earlier finding) |
+| B | `*::* = delegate::*` | error `'*::* ='` (ASTERISK/DBL_COLON/ASTERISK/EQ) → `delegate` type → error `'::*'` → `;` |
+| C | `Map::* = store::*` | `Map` type → error `'::* ='` → `store` type → error `'::*'` → `;` (clean, repeatable) |
+| D | `[List, Closeable]::* = items::*` | error `'['` → `List` type → error `','` → `Closeable` type → error `']::* ='` → `items` type → error `'::*'` → `;` |
+| E | `[List<V>, Map<K,V>]::* = store::*` | same as D; **type parameters inside the brackets fully parse** (`List<V>`, `Map<K, V>`) |
+| F | `List::size = items::size` | `List` type → error `'::'` → `size` type → empty error → error `'='` → `items` type → error `'::'` → `size` type → `;` |
+| G | `List::[size, isEmpty] = items::*` | `List` type → error `'::['` → `size` type → error `','` → `isEmpty` type → error `'] ='` → `items` type → error `'::*'` → `;` |
+| H | `List::get = items::getOrDefault` | like F; names (`get`, `getOrDefault`) as stray types |
+| I | `Map::* = *::*` | `Map` type → **entire RHS `'::* = *::*'` collapses into ONE error element** (most compact) → `;` |
+| J | `Map::* = [store, resource]::*` | `Map` type → error `'::* = ['` → `store` type → error `','` → `resource` type → error `']::*'` → `;` |
+| K | `List::[get, set] = items::[get, set]` | fully fragmented: types for every name, errors for every `:: [ ] , =` |
+| (normal) | `void close() { ... }` | **intact** `PsiMethod` + `PsiCodeBlock` — untouched ✓ |
+
+### Phase 3 IDE-support implications
+1. **Injection: not viable** (no host), consistent with the per-method `=`.
+2. **Highlighting via `Annotator`: feasible but messy** — marker tokens (`:: * [ ] =`) sit in
+   identifiable `PsiErrorElement`s; type/method names are stray `PsiTypeElement`s that already
+   resolve. Partial coloring by walking the sibling run is achievable.
+3. **Error suppression: hard** — each line yields MULTIPLE, oddly-grouped error elements
+   (not one), so suppressing precisely without hiding real errors is fragile. Likely the
+   toughest part of any future Phase 3 IDE support.
+4. **Consistency is the asset** — the decomposition (type-position types + punctuation errors
+   + name types + `;`) is reliable enough that a *recognizer* could pattern-match the sibling
+   run. Useful intelligence for a future preprocessor front-end, not only the IDE.
+5. **Type parameters parse** even inside bracket groups (Family E) — good news for any
+   type-aware processing.
+
+**Conclusion for now:** Phase 3 class-body syntax is parseable-enough to *recognize* (stable
+fragmentation) but *not* cleanly highlightable/suppressible in IntelliJ without significant
+sibling-run heuristics. Defer Phase 3 IDE support; this dump is the reference when it's taken
+up. The per-method `->`/`=` forms (A2) remain the near-term target.
+
