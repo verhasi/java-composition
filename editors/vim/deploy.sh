@@ -14,7 +14,7 @@
 set -euo pipefail
 
 PLUGIN_REMOTE="git@github.com:verhasi/java-composition.vim.git"
-PLUGIN_BRANCH="main"
+PLUGIN_BRANCH="master"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"        # editors/vim
 MONOREPO_ROOT="$(cd "$HERE/../.." && pwd)"
