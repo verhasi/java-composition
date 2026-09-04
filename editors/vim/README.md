@@ -23,16 +23,25 @@ so ordinary assignments (`int x = 5;`) are never affected.
 
 ## Install (plugin manager — recommended)
 
-The add-on lives in the `editors/vim` subdirectory of this repository, laid out as a valid
+The add-on lives in the `editors/vim` subdirectory of this project, laid out as a valid
 Vim/Neovim plugin root (`after/syntax/java.vim`). Point your plugin manager at that
 subdirectory and it installs directly from Git — no manual copying, updates come with the
 manager.
 
-**lazy.nvim** (Neovim) — expose the repo's `editors/vim` subdirectory on the runtimepath:
+Releases are delivered through Bitbucket, so the install URL is the public Bitbucket
+repository (`master` branch):
+
+**vim-plug** (Vim or Neovim) — full URL (non-GitHub), `rtp` for the subdirectory:
+
+```vim
+Plug 'https://bitbucket.org/mocker-guru/java-composition.git', { 'rtp': 'editors/vim' }
+```
+
+**lazy.nvim** (Neovim) — full URL, then expose the subdirectory on the runtimepath:
 
 ```lua
 {
-  "verhasi/java-composition",
+  url = "https://bitbucket.org/mocker-guru/java-composition.git",
   lazy = false,
   init = function()
     vim.opt.rtp:append(vim.fn.stdpath("data") .. "/lazy/java-composition/editors/vim")
@@ -40,22 +49,16 @@ manager.
 }
 ```
 
-**vim-plug** (Vim or Neovim) — uses the `rtp` option for a plugin in a subdirectory:
-
-```vim
-Plug 'verhasi/java-composition', { 'rtp': 'editors/vim' }
-```
-
 **packer.nvim** (Neovim):
 
 ```lua
-use { "verhasi/java-composition", rtp = "editors/vim" }
+use { "https://bitbucket.org/mocker-guru/java-composition.git", rtp = "editors/vim" }
 ```
 
 **Native packages** (no manager, Vim 8+/Neovim) — clone and expose the subdir:
 
 ```sh
-git clone https://github.com/verhasi/java-composition \
+git clone https://bitbucket.org/mocker-guru/java-composition.git \
   ~/.vim/pack/plugins/start/java-composition
 # then, in your vimrc:
 #   set runtimepath+=~/.vim/pack/plugins/start/java-composition/editors/vim
@@ -68,8 +71,11 @@ highlighted.
 > `runtimepath` (verified: with `runtimepath+=editors/vim`, the add-on's syntax items load
 > and highlight). The exact option name differs per manager (`rtp` for vim-plug/packer, an
 > `rtp:append` for lazy.nvim) because the plugin lives in a subdirectory rather than the repo
-> root. If a future dedicated plugin repo has the add-on at its root, these become a bare
-> one-liner with no subdir option.
+> root.
+>
+> **Availability:** the editor add-on ships with the release that carries the `editors/vim`
+> directory. If your install finds nothing to highlight, you are likely on an older release
+> that predates it — update to the latest.
 
 ## Install (manual copy)
 
