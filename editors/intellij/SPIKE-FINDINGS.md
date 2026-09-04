@@ -57,18 +57,26 @@ Symbol Solver in the preprocessor.)
 ## Decision
 
 Per the plan's decision matrix: **payload is in a non-host `PsiErrorElement` → language
-injection is NOT viable as documented.** Abandon the `MultiHostInjector` approach.
+injection is NOT viable as documented.** Abandon the `MultiHostInjector` approach. (This
+half is *spiked* — the injector logged "not a host" for every candidate.)
 
-**A2 architecture (evidence-based): `Annotator` + `HighlightErrorFilter`.**
+**A2 architecture (PROPOSED, pending a second spike): `Annotator` + `HighlightErrorFilter`.**
 
-Why this is actually good news, not just a fallback:
+⚠️ **HONESTY NOTE — the annotator path is NOT yet spiked.** We proved injection is *not*
+viable; we have **not** proven the fallback *is*. Two things remain unverified by observation:
+- whether an `Annotator` is even **invoked** on tokens that live inside a `PsiErrorElement`
+  (annotators may skip error-element children);
+- whether any color we add **renders**, or is **overridden/obscured** by IntelliJ's own
+  error highlighting on the error element.
+Until the annotator spike (below) confirms coloring actually shows, "feasible" is an
+assumption, not evidence.
+
+Why it *might* work (the observation that motivates trying):
 - For the **`->` form**, the parser has *already fully parsed the payload* into real Java PSI
-  **inside** the error element. An `Annotator` can descend into that `PsiErrorElement`, color
-  the `ARROW` token as an operator, and the already-parsed `c.size()` reference/call nodes get
-  proper coloring — **no injection needed**; the parser did the work.
-- **`HighlightErrorFilter`** has a precise, observable match: suppress a `PsiErrorElement`
-  whose first child is an `ARROW` (or `EQ`) token in method-body position (immediately after a
-  `PsiMethod`'s parameter list / its trailing empty error element).
+  **inside** the error element. IF an annotator can reach in and color, the `ARROW` token and
+  the already-parsed `c.size()` nodes could be highlighted — no injection needed.
+- **`HighlightErrorFilter`** has a precise, observable match: a `PsiErrorElement` whose first
+  child is an `ARROW`/`EQ` token in method-body position.
 
 Honest caveats:
 - The **`=` form is fragmented**, not a single node. Highlighting it will require walking a
@@ -80,16 +88,34 @@ Honest caveats:
 
 ## Next steps (A2 build, post-spike)
 
-1. Replace the spike `ConcisePayloadInjector` with an `Annotator` that:
-   - colors the `ARROW`/`EQ` marker token as `OPERATION_SIGN`;
-   - for the `->` form, colors the already-parsed payload nodes (or leaves them to default
-     Java coloring if they already resolve).
-2. Tighten `ConciseErrorFilter` to match the observed shapes precisely (first-child
-   `ARROW`/`EQ`, method-body position), for both the empty trailing error and the payload
-   error element.
-3. Handle the `=` form's fragmentation explicitly (match the sibling run); accept partial
-   coverage if full is infeasible.
-4. Keep injector code removed from `plugin.xml` (or leave disabled) — it is not the path.
+### Annotator spike (RUN THIS NEXT — turns the assumption into evidence)
+`ConciseMarkerAnnotator` (registered `<annotator language="JAVA">`) colors the marker tokens
+`ARROW` / `DOUBLE_COLON` / `ASTERISK` (and method-body `EQ`) with `OPERATION_SIGN`, and logs
+every hit noting whether the token is inside a `PsiErrorElement`.
+
+**Run:** `./gradlew runIde`, open `sandbox-samples/Sample.java` (and `WildcardProbe.java`).
+
+**Observe (the two unverified questions):**
+1. **Invocation** — does `idea.log` contain `[spike-annotator] coloring marker …
+   inErrorElement=true` lines? If yes, annotators DO fire on error-element children.
+2. **Rendering** — do the `->` / `=` / `::` / `*` markers actually appear **colored** in the
+   editor, or does the red error highlighting override them? (Screenshot.)
+
+**Record the result here:**
+- Annotator invoked on error-element children? **YES / NO**: `______`
+- Color visibly renders on the markers? **YES / NO**: `______`
+- → If both YES: `Annotator + HighlightErrorFilter` is confirmed viable → proceed to build A2.
+- → If invoked but not rendered: error highlighting wins; need another approach (e.g. also
+  suppress the error via the filter FIRST, then re-test coloring).
+- → If not invoked at all: annotators skip error-element children → A2 highlighting of the
+  payload is not achievable this way; reconsider.
+
+### After the annotator spike confirms viability
+1. Turn `ConciseMarkerAnnotator` into the real A2 annotator (scope to method-body position,
+   color marker + `->` payload).
+2. Tighten `ConciseErrorFilter` to the observed shapes (first-child `ARROW`/`EQ`).
+3. Handle the `=` form's fragmentation as best-effort.
+4. Remove/disable the `MultiHostInjector` (not the path).
 
 ---
 
@@ -142,9 +168,11 @@ this is intelligence-gathering for Phase 3, not part of the A2 build.)
 
 ### Phase 3 IDE-support implications
 1. **Injection: not viable** (no host), consistent with the per-method `=`.
-2. **Highlighting via `Annotator`: feasible but messy** — marker tokens (`:: * [ ] =`) sit in
-   identifiable `PsiErrorElement`s; type/method names are stray `PsiTypeElement`s that already
-   resolve. Partial coloring by walking the sibling run is achievable.
+2. **Highlighting via `Annotator`: UNVERIFIED** — marker tokens (`:: * [ ] =`) sit in
+   identifiable `PsiErrorElement`s and names are stray `PsiTypeElement`s that already resolve,
+   so coloring *looks* reachable — but whether an annotator is invoked on error-element
+   children and whether the color renders (vs. being overridden by error highlighting) is
+   **not spiked**. Same open question as the A2 annotator spike.
 3. **Error suppression: hard** — each line yields MULTIPLE, oddly-grouped error elements
    (not one), so suppressing precisely without hiding real errors is fragile. Likely the
    toughest part of any future Phase 3 IDE support.
