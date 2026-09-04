@@ -90,3 +90,25 @@ Honest caveats:
 3. Handle the `=` form's fragmentation explicitly (match the sibling run); accept partial
    coverage if full is infeasible.
 4. Keep injector code removed from `plugin.xml` (or leave disabled) — it is not the path.
+
+---
+
+## Forward probe — Phase 3 wildcard delegation (future intelligence)
+
+`sandbox-samples/WildcardProbe.java` probes how IntelliJ's Java parser recovers on the
+**Phase 3** class-level composition syntax (`docs/requirements-phase3.md`):
+`[Type(s)]::[method(s)] = target::[method(s)]`, including `*`, bracket groups, type params,
+method renames, and auto-discover targets. These are **class-body-level** declarations, a
+different parser position than the per-method `->`/`=` bodies — so recovery may look very
+different.
+
+**Why probe now:** while the PSI-dump instrument exists, capturing how the parser breaks on
+these forms is cheap and tells us, ahead of time, whether class-body-level highlighting/error
+suppression will be feasible and what PSI shapes we'd key off.
+
+**How to record (run `runIde`, open the file, Tools | Dump PSI, read idea.log):** for each
+family (A–K in the file), note the recovered node shape — e.g. does `Map::* = store::*;`
+land in one `PsiErrorElement`, or fragment like the per-method `=` did? Does any sub-part
+parse into usable PSI? Append a short table here per family. (Left unfilled until observed;
+this is intelligence-gathering for Phase 3, not part of the A2 build.)
+
