@@ -23,59 +23,41 @@ so ordinary assignments (`int x = 5;`) are never affected.
 
 ## Install (plugin manager — recommended)
 
-The add-on lives in the `editors/vim` subdirectory of this project, laid out as a valid
-Vim/Neovim plugin root (`after/syntax/java.vim`). Point your plugin manager at that
-subdirectory and it installs directly from Git — no manual copying, updates come with the
-manager.
+The plugin is published to its own repository, **[verhasi/java-composition.vim]**, whose
+root *is* the plugin — so it installs with a plain one-liner and a tiny clone (no need to
+pull the whole `java-composition` project). Development happens in this monorepo under
+`editors/vim/`; that content is deployed to the plugin repo (see `deploy.sh`).
 
-Releases are delivered through Bitbucket, so the install URL is the public Bitbucket
-repository (`master` branch):
+[verhasi/java-composition.vim]: https://github.com/verhasi/java-composition.vim
 
-**vim-plug** (Vim or Neovim) — full URL (non-GitHub), `rtp` for the subdirectory:
+**vim-plug** (Vim or Neovim):
 
 ```vim
-Plug 'https://bitbucket.org/mocker-guru/java-composition.git', { 'rtp': 'editors/vim' }
+Plug 'verhasi/java-composition.vim'
 ```
 
-**lazy.nvim** (Neovim) — full URL, then expose the subdirectory on the runtimepath:
+**lazy.nvim** (Neovim):
 
 ```lua
-{
-  url = "https://bitbucket.org/mocker-guru/java-composition.git",
-  lazy = false,
-  init = function()
-    vim.opt.rtp:append(vim.fn.stdpath("data") .. "/lazy/java-composition/editors/vim")
-  end,
-}
+{ "verhasi/java-composition.vim", lazy = false }
 ```
 
 **packer.nvim** (Neovim):
 
 ```lua
-use { "https://bitbucket.org/mocker-guru/java-composition.git", rtp = "editors/vim" }
+use "verhasi/java-composition.vim"
 ```
 
-**Native packages** (no manager, Vim 8+/Neovim) — clone and expose the subdir:
+**Native packages** (no manager, Vim 8+/Neovim):
 
 ```sh
-git clone https://bitbucket.org/mocker-guru/java-composition.git \
+git clone https://github.com/verhasi/java-composition.vim \
   ~/.vim/pack/plugins/start/java-composition
-# then, in your vimrc:
-#   set runtimepath+=~/.vim/pack/plugins/start/java-composition/editors/vim
 ```
 
 After installing, open any `.java` file with concise bodies — the markers and payload are
-highlighted.
-
-> The common mechanism behind all of these is simply putting `editors/vim` on Vim's
-> `runtimepath` (verified: with `runtimepath+=editors/vim`, the add-on's syntax items load
-> and highlight). The exact option name differs per manager (`rtp` for vim-plug/packer, an
-> `rtp:append` for lazy.nvim) because the plugin lives in a subdirectory rather than the repo
-> root.
->
-> **Availability:** the editor add-on ships with the release that carries the `editors/vim`
-> directory. If your install finds nothing to highlight, you are likely on an older release
-> that predates it — update to the latest.
+highlighted. No `rtp`/subdirectory option is needed: the add-on sits at the plugin repo's
+root (`after/syntax/java.vim`).
 
 ## Install (manual copy)
 
