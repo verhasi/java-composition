@@ -5,6 +5,14 @@ This is a lightweight **syntax add-on**: it extends the standard Java syntax to 
 the concise markers `->` and `=` and their payload. It does not replace the built-in
 Java syntax, and standard `{ ... }` bodies are untouched.
 
+![Concise method bodies highlighted in Vim: the -> and = markers are colored as operators and their payload as ordinary Java, while a standard { ... } body is unchanged.](screenshot.png)
+
+*Screenshot of `sample-concise.java` in Vim with this add-on active. Colors reflect the
+active colorscheme — yours will match your own theme.*
+
+The same source as plain text (GitHub cannot highlight the concise syntax — that is exactly
+what this add-on adds in your editor):
+
 ```java
 public int size()            -> c.size();      // -> colored as an operator, c.size() as Java
 public boolean isEmpty()     -> c.isEmpty();
