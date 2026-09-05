@@ -18,7 +18,9 @@
     <depends>com.intellij.java</depends>
 
     <!-- Extension points are added incrementally by A2.1 (Annotator), A2.2 (HighlightInfoFilter),
-         and A2.3 (PsiAugmentProvider). None registered yet. -->
+         and A2.3 (PsiAugmentProvider). -->
     <extensions defaultExtensionNs="com.intellij">
+        <!-- A2.1 — colour the concise -> / = markers in method-body position. -->
+        <annotator language="JAVA" implementationClass="guru.mocker.composition.intellij.ConciseMarkerAnnotator"/>
     </extensions>
 </idea-plugin>

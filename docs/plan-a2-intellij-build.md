@@ -75,11 +75,17 @@ false-positives (strategy only; no code reused).
   Gradle 9.4.1 / plugin 2.18.1 / JDK 21. `buildPlugin` SUCCESSFUL (empty-but-valid ZIP);
   `compileTestJava` resolves. No prototype code copied.
 
-### A2.1 — Annotator (marker colouring)
-- Implement an `Annotator` (language `JAVA`) that colours `->`/`=` markers with
-  `DefaultLanguageHighlighterColors.KEYWORD`, scoped strictly to method-body position (marker
-  after a method's parameter list). Optionally colour the `::` of the `=` form.
-- No debug logging in production; add an opt-in trace switch if useful.
+### A2.1 — Annotator (marker colouring) ✅ DONE
+- `ConciseMarkerAnnotator` (language `JAVA`, registered): colours `ARROW`/`EQ`/`DOUBLE_COLON`
+  markers with `KEYWORD`, scoped to method-body position via a positional anchor (marker inside
+  a `PsiErrorElement` whose preceding non-whitespace sibling — walking past stray error/type
+  nodes for the `=` form — is a `PsiMethod`). No debug logging.
+- Test framework fix: `LightJavaCodeInsightFixtureTestCase` needs
+  `TestFrameworkType.Plugin.Java` (not `Platform`).
+- `ConciseMarkerAnnotatorTest` (headless): verifies the annotator does not flag normal
+  lambda `->` / assignment `=` (self-contained, no JDK types — light fixture has no full JDK).
+  PASSES. Note: silent-INFO colour itself is not headlessly assertable → colour confirmed
+  manually in sandbox (museum spike).
 
 ### A2.2 — HighlightInfoFilter (suppress false squiggles)
 - Implement a `HighlightInfoFilter` that suppresses, at concise constructs only:

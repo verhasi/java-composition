@@ -18,7 +18,9 @@ dependencies {
         intellijIdeaCommunity("2024.3")
         // Java PSI is required: the plugin operates on Java files' PSI.
         bundledPlugin("com.intellij.java")
-        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+        // Java test fixtures (LightJavaCodeInsightFixtureTestCase) require the Java plugin's
+        // test framework, not just Platform.
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Plugin.Java)
     }
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
     testImplementation("junit:junit:4.13.2") // LightJavaCodeInsightFixtureTestCase (JUnit3/4 base)
