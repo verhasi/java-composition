@@ -179,6 +179,38 @@ suppression is logged `[spike-infofilter] SUPPRESSING …`.
 - Squiggles gone but no color → color truly overridden → revisit annotator approach.
 - Over-suppresses real errors → tighten the concise-context matcher (position-based).
 
+### Observed run #1 (HighlightInfoFilter + annotator) — PARTIAL
+
+Sandbox observation + log (`[spike-infofilter]` = 193 suppressions, `[spike-annotator]` = 175):
+
+- ✅ **Parse-error squiggles SUPPRESSED and it works** — the red underwaves on the marker
+  punctuation (`:: = * [ ]`) were drawn, then **vanished after ~1s** (parse highlight paints
+  first, then the daemon pass runs our filter and removes them). 193 suppressions logged:
+  `'Unexpected token'`, `'Identifier expected'`, `'{' or ';' expected`. **This is the key
+  win** — error suppression via `HighlightInfoFilter` is CONFIRMED working.
+- ❌ **Semantic "cannot resolve" on the NAMES still red** — the method-ref field/method names
+  (`store`, `size`, `Math`, …) stay red. The log shows suppressions ONLY on punctuation
+  tokens, none on the stray `PsiTypeElement` names. Cause: those names are siblings BETWEEN
+  the marker error elements, and the `hasMarkerNeighbor` matcher isn't catching them.
+  **This is a matcher GAP, not a platform limit** — fixable by broadening the concise-context
+  detection to the stray type nodes flanking markers.
+- ❌ **Markers NOT visibly colored** (`->` / `=`) — even with squiggles gone, no color showed.
+  So the earlier "overridden by squiggle" hypothesis is WRONG; the color simply isn't
+  visible. Two candidates: (a) `newSilentAnnotation` on tokens inside a `PsiErrorElement` may
+  not paint; (b) `OPERATION_SIGN` ≈ default foreground in the theme → invisible.
+  **Run #2 change:** annotator now uses `enforcedTextAttributes` with a blatant YELLOW
+  background + RED bold text to disambiguate "not applied" from "applied but same color".
+
+### Run #2 — to observe
+Re-run `runIde`. Look at a `->` / `=` marker:
+- **Yellow highlight visible?** → annotations DO paint inside error elements; the earlier
+  problem was just an invisible color. Then the real annotator picks a proper theme color.
+- **Still nothing?** → `newSilentAnnotation`/annotations do not paint inside `PsiErrorElement`
+  children; coloring the payload needs a different route (color the stray parsed nodes that
+  ARE outside the error element, or reconsider).
+Record the result and, separately, note that the semantic-name suppression matcher needs
+broadening regardless.
+
 ### Superseded (kept for history)
 The prior "two error sources, semantic ones unsuppressable, needs custom PSI" conclusion is
 superseded by the `HighlightInfoFilter` finding above. The two-error-source *observation*

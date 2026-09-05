@@ -48,9 +48,18 @@ public class ConciseMarkerAnnotator implements Annotator {
         LOG.warn("[spike-annotator] coloring marker '" + element.getText() + "' type=" + name
                 + " inErrorElement=" + inError + " range=" + element.getTextRange());
 
+        // SPIKE: use a blatantly visible forced attribute (yellow background + red bold text)
+        // so we can distinguish "annotation applied but color ~= default text" from "annotation
+        // not painted at all". OPERATION_SIGN often equals default foreground → invisible.
+        com.intellij.openapi.editor.markup.TextAttributes attrs =
+                new com.intellij.openapi.editor.markup.TextAttributes();
+        attrs.setBackgroundColor(java.awt.Color.YELLOW);
+        attrs.setForegroundColor(java.awt.Color.RED);
+        attrs.setFontType(java.awt.Font.BOLD);
+
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(element.getTextRange())
-                .textAttributes(DefaultLanguageHighlighterColors.OPERATION_SIGN)
+                .enforcedTextAttributes(attrs)
                 .create();
     }
 
