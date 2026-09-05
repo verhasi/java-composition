@@ -284,6 +284,68 @@ needed for A2 to be clean on real interface-implementing classes, not just Phase
 - Recommend: next spike = `PsiAugmentProvider` synthesizing one concise method → confirm the
   class-level error clears and the method appears "implemented". THEN A2 is truly usable.
 
+### Augment spike result (ImplProbe) — mechanism WORKS + a key lesson
+
+`ConciseAugmentProvider` fired (48×) and hardcoded-synthesized `size()/isEmpty()/contains()`.
+Log evidence:
+- ✅ **Synthetic methods SATISFY the interface-implementation check** — the class-level "must
+  implement" error now names ONLY `toArray()` (the one method neither written nor augmented).
+  `size()`, `isEmpty()`, `contains()`, `iterator()`, … no longer demanded. `PsiAugmentProvider`
+  is the right tool, proven.
+- ⚠️ **New "duplicate" error** — `'size()' is already defined in 'ImplProbe'` (also isEmpty,
+  contains). The spike blindly added methods the user ALSO declared concisely.
+
+**The important insight:** the duplicate error means IntelliJ now counts BOTH the user's
+concise `size()` AND our synthetic one → so the user's concise method is NOT truly invisible;
+it collides. Two design consequences:
+1. **Augment only the genuinely-missing methods** — skip any the class already declares
+   (concise included). This mirrors the Phase-3 WildcardExpander "override rule" exactly.
+2. **Re-open the core question**: why did the user's bodyless concise `size()` NOT satisfy
+   `List.size()` on its own (pre-augment) yet collides as a duplicate (post-augment)? Likely
+   the bodyless method is a *valid-enough* `PsiMethod` for name-collision but *not* accepted as
+   a concrete implementation (no body → treated as abstract-ish). So the real fix may be
+   subtler than "augment missing methods": we may need to augment a *body-bearing replacement*
+   for the user's concise method (so it reads as concrete) rather than an *additional* method.
+
+**Next spike step:** change the augment provider to synthesize ONLY methods the class does not
+already declare (respect existing concise headers) — and separately probe whether augmenting a
+concrete twin for a concise method (vs. leaving the user's) is what makes it count as
+implemented without a duplicate. This is the crux of making A2 clean for interface-implementing
+classes.
+
+### Augment spike run #2 (skip-already-declared) — WORKS functionally, but re-entrancy BUG
+
+User added a concise `iterator()` too, so all referenced `List` methods are now declared
+concisely. Result:
+- ✅ **class-level "must implement" error: GONE entirely** (empty in log). IntelliJ considers
+  the class fully implemented.
+- ✅ **no duplicate errors** (skip-already-declared removed the collision).
+- ✅ screenshot shows the `@Override`/"implements method" **gutter markers** on the concise
+  methods → IntelliJ recognizes them as implementations.
+- → **Hypothesis B confirmed (functionally):** with no duplicate and the interface otherwise
+  satisfied, the augmentation makes the class read as complete.
+
+⚠️ **CRITICAL BUG: re-entrancy / perf.** The provider fired **16,182 times** on one file.
+Cause: `declaresMethod` calls `psiClass.getMethods()` **from inside `getAugments()`**, which
+re-invokes augment providers → recursion. This is the well-documented `PsiAugmentProvider`
+trap ("do not query the class's methods from within getAugments"). The "synthesized N" log
+never appeared, consistent with re-entrancy before completion. A real plugin MUST NOT do this.
+
+**Correct approach (for the real build):** avoid `getMethods()` inside the augment. To detect
+already-declared methods without recursion, inspect the class's OWN source declarations
+non-recursively (e.g. via the AST/stub of the physical class, not the augmented view), and/or
+follow Lombok's guarding (dumb-aware, recursion guards, caching). The FUNCTIONAL conclusion
+stands (augmentation satisfies the check); the DETECTION mechanism needs a recursion-safe
+rewrite.
+
+### Net conclusion for the class-level layer
+`PsiAugmentProvider` is the right tool and it works — synthetic methods satisfy the
+implementation check, clear the class-level error, and show gutter markers. Remaining work for
+a real A2 that supports interface-implementing classes: (1) recursion-safe detection of
+already-declared (incl. concise) methods; (2) extract the real signature from the concise PSI
+to synthesize an accurate method (return type + params), instead of hardcoding. Both are
+tractable but non-trivial — A2 for interface classes is a real component, not a one-liner.
+
 ### Why this direction is de-risked (Lombok precedent — strategy only, no code)
 
 Lombok's IntelliJ plugin (Apache-2.0, now in `projectlombok/lombok`) faced the SAME class of
