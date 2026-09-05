@@ -47,19 +47,40 @@ public class ConciseAugmentProvider extends PsiAugmentProvider {
             return result; // spike: only touch the probe class
         }
 
-        LOG.warn("[spike-augment] augmenting " + psiClass.getName() + " with synthetic methods");
+        LOG.warn("[spike-augment] augmenting " + psiClass.getName() + " (skipping already-declared)");
         PsiManager mgr = psiClass.getManager();
         PsiElementFactory f = JavaPsiFacade.getElementFactory(psiClass.getProject());
         PsiType booleanType = PsiType.BOOLEAN;
         PsiType intType = PsiType.INT;
         PsiType objectType = f.createTypeByFQClassName("java.lang.Object", psiClass.getResolveScope());
 
-        result.add(cast(method(mgr, psiClass, "size", intType)));
-        result.add(cast(method(mgr, psiClass, "isEmpty", booleanType)));
-        PsiMethod contains = method(mgr, psiClass, "contains", booleanType);
-        ((LightMethodBuilder) contains).addParameter("o", objectType);
-        result.add(cast(contains));
+        // KEY: only synthesize methods the class does NOT already declare (by name), so we
+        // don't collide with the user's concise `size()`/`isEmpty()`/`contains()`. This tests
+        // whether the user's own concise (bodyless) methods count as implementations once we
+        // stop duplicating them.
+        if (!declaresMethod(psiClass, "size")) {
+            result.add(cast(method(mgr, psiClass, "size", intType)));
+        }
+        if (!declaresMethod(psiClass, "isEmpty")) {
+            result.add(cast(method(mgr, psiClass, "isEmpty", booleanType)));
+        }
+        if (!declaresMethod(psiClass, "contains")) {
+            PsiMethod contains = method(mgr, psiClass, "contains", booleanType);
+            ((LightMethodBuilder) contains).addParameter("o", objectType);
+            result.add(cast(contains));
+        }
+        LOG.warn("[spike-augment] synthesized " + result.size() + " method(s) for " + psiClass.getName());
         return result;
+    }
+
+    /** True if the class already declares a method with this name (incl. concise headers). */
+    private boolean declaresMethod(PsiClass psiClass, String name) {
+        for (PsiMethod m : psiClass.getMethods()) {
+            if (name.equals(m.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private PsiMethod method(PsiManager mgr, PsiClass containing, String name, PsiType returnType) {
