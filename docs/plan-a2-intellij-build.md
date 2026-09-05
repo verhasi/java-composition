@@ -44,6 +44,10 @@ false-positives (strategy only; no code reused).
    already-declared methods **without** `getMethods()` — inspect the class's own physical
    declarations (AST/stub) non-recursively, and/or use Lombok-style recursion guards +
    dumb-aware + caching (`CachedValuesManager`).
+   **VERIFIED FIXED (A2.3):** the `getChildren()`-based provider is mentioned only **3× (all
+   benign INFO)** in a full sandbox session vs. the prototype's 16,182× — no recursion, no
+   StackOverflow. (A `SEVERE` slow-op in the log is a platform-side plugin-UNLOAD artifact
+   from rebuild/reload — `DynamicPlugins`/`InjectedLanguageManager` — not our code.)
 2. **Residual trailing parse errors.** `'Identifier expected'` on the trailing `;` and
    `'{' or ';' expected'` on trailing whitespace after a concise body are NOT yet matched by
    `isInConciseContext`. Extend the matcher to the `;`/whitespace immediately following a
