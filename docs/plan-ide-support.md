@@ -69,9 +69,15 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
 - **Remaining sub-task**: add the Neovim Tree-sitter query (`queries/java/highlights.scm`)
   for Tree-sitter-based highlighting (Neovim/Helix/Zed).
 
-### Task A2 — IntelliJ plugin: error suppression + highlighting
-**Spike complete (see `editors/intellij/SPIKE-FINDINGS.md`). Architecture proven by
-observation:**
+### Task A2 — IntelliJ plugin: error suppression + highlighting ✅ DONE (per-method)
+**Built fresh under `editors/intellij/` per `docs/plan-a2-intellij-build.md` (spike frozen in
+`editors/intellij-spike-museum/`). Shipped: `Annotator` (marker colour) +
+`HighlightInfoFilter` (suppress false parse/semantic squiggles, no over-suppression) +
+`PsiAugmentProvider` (concise methods satisfy `implements`, recursion-safe, discriminating).
+7 headless tests green; ZIP builds; install-from-disk documented. Wildcard forms deferred to
+Phase 3.**
+
+<details><summary>Spike findings that drove the design</summary>
 - Language injection: NOT viable (concise payload is in a non-host `PsiErrorElement`).
 - **`Annotator`** colours the `->`/`=` markers (`KEYWORD` attr) — renders even inside error
   elements (proven).
@@ -92,6 +98,9 @@ observation:**
 - Package as a ZIP; distribute via GitHub (per decision). Local install-from-disk for dev.
 - **Verify**: concise `->`/`=` file shows coloured markers, no false squiggles, real errors
   preserved; project resolves preprocessed classes after Maven import.
+</details>
+
+Implemented status is tracked in `docs/plan-a2-intellij-build.md` (A2.0–A2.5 all ✅).
 
 ### Task A3 — LSP grammar injection (client-side highlighting)
 - Shared TextMate injection grammar (`injectionSelector: "L:source.java"`) matching the

@@ -13,18 +13,23 @@
         as interface implementations.
     ]]></description>
 
+    <change-notes><![CDATA[
+        <b>0.1.0</b> — Initial release. Per-method concise bodies (<code>-&gt;</code> and
+        <code>=</code>): marker highlighting, suppression of the parser's false errors, and
+        recognition of concise methods as interface implementations. Wildcard delegation
+        (<code>Map::* = store::*</code>) is not yet supported.
+    ]]></change-notes>
+
     <!-- Operates on the Java PSI. -->
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.java</depends>
 
-    <!-- Extension points are added incrementally by A2.1 (Annotator), A2.2 (HighlightInfoFilter),
-         and A2.3 (PsiAugmentProvider). -->
     <extensions defaultExtensionNs="com.intellij">
-        <!-- A2.1 — colour the concise -> / = markers in method-body position. -->
+        <!-- Colour the concise -> / = markers in method-body position. -->
         <annotator language="JAVA" implementationClass="guru.mocker.composition.intellij.ConciseMarkerAnnotator"/>
-        <!-- A2.2 — suppress the false parse/semantic squiggles on concise bodies (Lombok-style). -->
+        <!-- Suppress the false parse/semantic squiggles on concise bodies (Lombok-style). -->
         <daemon.highlightInfoFilter implementation="guru.mocker.composition.intellij.ConciseHighlightInfoFilter"/>
-        <!-- A2.3 — synthesize concise methods so a concise class satisfies `implements`. -->
+        <!-- Synthesize concise methods so a concise class satisfies `implements`. -->
         <lang.psiAugmentProvider implementation="guru.mocker.composition.intellij.ConciseAugmentProvider"/>
     </extensions>
 </idea-plugin>

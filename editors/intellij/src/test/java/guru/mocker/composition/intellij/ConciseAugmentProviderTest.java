@@ -55,4 +55,40 @@ public class ConciseAugmentProviderTest extends LightJavaCodeInsightFixtureTestC
         assertTrue("Expected a 'must implement value()' error on PartialImpl (the genuine "
                 + "missing method must not be hidden by the augment provider)", mustImplementValue);
     }
+
+    /**
+     * Edge cases: a generic method, a throwing method, a void method, and a constructor-ref
+     * ({@code = Type::new}) form — all implementing an interface concisely — must be accepted
+     * (no "must implement"). Verifies the twin copies type parameters, throws, void return, and
+     * that the {@code =} form's bodyless method is recognized.
+     */
+    public void testSignatureEdgeCasesAreAccepted() {
+        myFixture.configureByText("Edge.java",
+                "class Host {\n" +
+                        "    static class Ex extends Exception {}\n" +
+                        "    interface Api {\n" +
+                        "        <T> T echo(T t);\n" +
+                        "        int risky() throws Ex;\n" +
+                        "        void act(int a);\n" +
+                        "        int sum(int... xs);\n" +
+                        "    }\n" +
+                        "    static class Impl implements Api {\n" +
+                        "        private int total = 0;\n" +
+                        "        public <T> T echo(T t)         -> t;\n" +
+                        "        public int risky() throws Ex   -> total;\n" +
+                        "        public void act(int a)         -> total = a;\n" +
+                        "        public int sum(int... xs)      -> total;\n" +
+                        "    }\n" +
+                        "}\n");
+        java.util.List<com.intellij.codeInsight.daemon.impl.HighlightInfo> infos =
+                myFixture.doHighlighting(com.intellij.lang.annotation.HighlightSeverity.ERROR);
+        boolean anyMustImplement = infos.stream().anyMatch(i ->
+                i.getDescription() != null
+                        && i.getDescription().contains("must either be declared abstract"));
+        assertFalse("Impl implements all Api methods concisely (generic/throws/void/varargs) — "
+                + "no 'must implement' expected; found: "
+                + infos.stream().map(com.intellij.codeInsight.daemon.impl.HighlightInfo::getDescription)
+                        .filter(d -> d != null && d.contains("must either")).toList(),
+                anyMustImplement);
+    }
 }

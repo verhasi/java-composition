@@ -35,7 +35,10 @@ java {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
+            // Compatible with 2024.3 (243) and later. Leave untilBuild open so newer IDEs are
+            // not artificially blocked; widen sinceBuild only if an older baseline is needed.
             sinceBuild.set("243")
+            untilBuild.set(provider { null })
         }
     }
 }

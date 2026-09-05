@@ -77,7 +77,7 @@ public final class ConciseAugmentProvider extends PsiAugmentProvider {
         return true;
     }
 
-    /** Synthesize a body-bearing twin copying the concise method's signature. */
+    /** Synthesize a body-bearing twin copying the concise method's full signature. */
     private PsiMethod synthesizeTwin(PsiClass containing, PsiMethod source) {
         LightMethodBuilder twin = new LightMethodBuilder(
                 containing.getManager(), JavaLanguage.INSTANCE, source.getName());
@@ -90,8 +90,18 @@ public final class ConciseAugmentProvider extends PsiAugmentProvider {
                 twin.addModifier(modifier);
             }
         }
+        // Type parameters (generic methods): <T> T get() = ...
+        for (com.intellij.psi.PsiTypeParameter tp : source.getTypeParameters()) {
+            twin.addTypeParameter(tp);
+        }
+        // Parameters — LightMethodBuilder preserves the declared type, including ellipsis
+        // (varargs) since we pass the parameter's own PsiType.
         for (PsiParameter p : source.getParameterList().getParameters()) {
             twin.addParameter(p.getName(), p.getType());
+        }
+        // Thrown exceptions: T m() throws IOException = ...
+        for (com.intellij.psi.PsiClassType thrown : source.getThrowsList().getReferencedTypes()) {
+            twin.addException(thrown);
         }
         twin.setContainingClass(containing);
         twin.setNavigationElement(source); // navigation jumps to the user's concise method

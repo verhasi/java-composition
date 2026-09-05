@@ -126,21 +126,29 @@ false-positives (strategy only; no code reused).
 - **Known cosmetic quirk (accepted):** IntelliJ lists the "must implement" error TWICE on the
   partial class (double-emission on the class-declaration range); the Implement-Methods popup
   shows it once, correctly. Predates the augment work; not a functional issue.
-- **Remaining polish (not blocking):** signature fidelity for edge cases — generics/type
-  params, `throws`, varargs. Current twin copies name/return/modifiers/params; extend as
-  needed.
+- **Signature fidelity ✅ DONE:** the twin now also copies type parameters
+  (`addTypeParameter`), thrown exceptions (`addException` from `getThrowsList`), and preserves
+  varargs (via the parameter's own `PsiType`). Edge-case test covers generic/throws/void/
+  varargs concise implementations of an interface — all accepted.
 
-### A2.4 — Tests (headless regression coverage)
-- `LightJavaCodeInsightFixtureTestCase` + `checkHighlighting`: concise file has NO error
-  highlights (markers/payload/field-as-type/trailing); genuinely-broken file STILL errors
-  (no over-suppression); interface-implementing concise class has no "must implement".
-- Augment provider: no recursion, no duplicate-method errors, correct signatures.
+### A2.4 — Tests (headless regression coverage) ✅ DONE
+- 7 headless tests across 3 classes (`LightJavaCodeInsightFixtureTestCase`):
+  - annotator does not flag normal `->`/`=`;
+  - filter keeps genuine syntax errors, keeps genuine duplicate methods, leaves normal code
+    clean (no over-suppression);
+  - augment accepts a full concise implementation, still errors on a partial one, and accepts
+    generic/throws/void/varargs signatures.
+- Colour rendering + concise-squiggle suppression themselves are confirmed visually in the
+  sandbox (silent-INFO / shifting-parser-errors are brittle to assert headlessly).
 
-### A2.5 — Packaging & distribution
-- `plugin.xml` metadata (`since-build`, no debug/PoC EPs); build ZIP via Gradle IntelliJ
-  Platform Plugin; distribute as a GitHub release ZIP (install-from-disk; Marketplace later).
-- Document `build-helper-maven-plugin` `add-source` on `generate-sources` for symbol resolution
-  in real builds.
+### A2.5 — Packaging & distribution ✅ DONE
+- `plugin.xml`: real metadata + change-notes; three production EPs (annotator, info-filter,
+  augment provider); no debug/PoC EPs. Gradle `ideaVersion`: `sinceBuild=243`, `untilBuild`
+  open (verified in the packaged plugin.xml: `<idea-version since-build="243" />`, no cap).
+- ZIP builds via `./gradlew buildPlugin`. README documents install-from-disk (with the
+  required restart — the plugin is not dynamically unloadable due to the augment provider),
+  the `build-helper-maven-plugin` `add-source` binding for symbol resolution, scope, and the
+  known cosmetic quirks. GitHub release ZIP is the distribution channel (Marketplace later).
 
 ### A2.6 — Retire the museum (optional)
 - Once A2 ships and is stable, decide whether to keep `editors/intellij-spike-museum/` as a
