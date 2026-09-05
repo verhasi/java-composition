@@ -248,6 +248,22 @@ cascade problem lives).
 
 Spike closed. Promote to the real A2 build.
 
+### Why this direction is de-risked (Lombok precedent — strategy only, no code)
+
+Lombok's IntelliJ plugin (Apache-2.0, now in `projectlombok/lombok`) faced the SAME class of
+problem: `@Getter`/`@Setter` generate members at build time, so IntelliJ flags a call to a
+not-yet-existing setter (`person.setAge(47)`) as a false "cannot resolve" semantic error.
+Out of IntelliJ's many mechanisms, Lombok's chosen answer is `HighlightInfoFilter` — the
+same one we arrived at independently. This confirms we are on the mainstream, sanctioned path
+for "false semantic errors from synthetic / non-standard code", not an obscure hack.
+
+We take only the **strategic direction**, no code. One honest asymmetry: Lombok also augments
+the PSI (`PsiAugmentProvider`) so the generated members genuinely resolve, then filters
+residual noise — it makes the code *correct*. We do NOT make concise syntax resolve (the real
+expansion lives in our separate preprocessor output); we suppress-and-recolor. So we use the
+same tool for a blunter purpose (hide, not resolve), which is why our matcher suppresses more
+than theirs — and the spike verified that is safe (no over-suppression of real code).
+
 ### Superseded (kept for history)
 The prior "two error sources, semantic ones unsuppressable, needs custom PSI" conclusion is
 superseded by the `HighlightInfoFilter` finding above. The two-error-source *observation*
