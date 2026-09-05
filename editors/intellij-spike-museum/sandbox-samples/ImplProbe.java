@@ -1,3 +1,4 @@
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -25,6 +26,8 @@ class ImplProbe implements List<String> {
     public int size()              -> impl.size();
     public boolean isEmpty()       -> impl.isEmpty();
     public boolean contains(Object o) = impl::contains;
+    @Override
+    public Iterator<String> iterator()  = impl::contains;
 
     // A normal method to compare error behaviour:
     public void clear() {

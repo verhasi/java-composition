@@ -17,6 +17,13 @@ Three editor concerns, each with a spike-proven mechanism:
 **Out of scope (→ Phase 3):** wildcard forms (`Map::* = store::*`) — their fragmented parse
 cascades and corrupts class structure; deferred.
 
+## Build discipline
+
+The spike was a **proof of concept**; its code is a **prototype** and is **not** the starting
+point. Prototypes are preserved as a museum exhibit (`editors/intellij-spike-museum/`) and
+never promoted to production. A2 is built **fresh from the findings below** — the *experience*
+carries over, the *code* does not. New production plugin lives in a clean `editors/intellij/`.
+
 ## Proven architecture (evidence from the spike)
 
 | Concern | Mechanism | Spike status |
@@ -58,43 +65,50 @@ false-positives (strategy only; no code reused).
 
 ## Build tasks
 
-### A2.1 — Promote & harden the Annotator
-- Rename spike `ConciseMarkerAnnotator` → real annotator; remove debug logging.
-- Colour `->`/`=` markers with `DefaultLanguageHighlighterColors.KEYWORD` (theme-aware).
-- Scope strictly to method-body position (marker after a method's parameter list).
-- Optionally colour the `::` in the `=` form.
+> Written fresh under a clean `editors/intellij/` (new Gradle project). The museum spike is a
+> reference for *behaviour and gotchas only* — no code is copied from it.
 
-### A2.2 — Promote & harden the HighlightInfoFilter
-- Rename spike `ConciseHighlightInfoFilter`; remove debug logging (keep an opt-in trace flag).
-- Suppress: parse errors on markers, field-as-type "cannot resolve", AND the trailing
-  `;`/whitespace errors (gotcha #2).
-- Recursion-safe, position-anchored matching; must not suppress errors in normal code.
+### A2.0 — Fresh project scaffold
+- New `editors/intellij/` Gradle IntelliJ Platform Plugin project (IDEA + `com.intellij.java`),
+  clean `plugin.xml`. (The spike's Gradle setup is a known-good reference for versions.)
 
-### A2.3 — Build the PsiAugmentProvider (the real work)
-- Recursion-safe detection of already-declared methods (gotcha #1).
-- Extract concise method signatures from the recovered PSI (gotcha #4) and synthesize matching
-  `LightMethodBuilder` methods so `implements` is satisfied.
-- Cache results (`CachedValuesManager`) keyed on the file; dumb-aware.
-- Do NOT duplicate user-declared (incl. concise) methods.
+### A2.1 — Annotator (marker colouring)
+- Implement an `Annotator` (language `JAVA`) that colours `->`/`=` markers with
+  `DefaultLanguageHighlighterColors.KEYWORD`, scoped strictly to method-body position (marker
+  after a method's parameter list). Optionally colour the `::` of the `=` form.
+- No debug logging in production; add an opt-in trace switch if useful.
 
-### A2.4 — Remove spike scaffolding
-- Delete `MultiHostInjector` (dead), `DumpPsiAction` (spike instrument), spike sample probes
-  (or move to test fixtures).
+### A2.2 — HighlightInfoFilter (suppress false squiggles)
+- Implement a `HighlightInfoFilter` that suppresses, at concise constructs only:
+  parse errors on markers, field-as-type "cannot resolve", AND the trailing `;`/whitespace
+  errors (gotcha #2).
+- Matching must be recursion-safe, position-anchored, and never suppress errors in normal code
+  (enforced by tests).
 
-### A2.5 — Tests (headless, real regression coverage)
-- `LightJavaCodeInsightFixtureTestCase` + `checkHighlighting`: assert that a concise file has
-  NO error highlights (markers/payload/field-as-type/trailing), that a genuinely-broken file
-  STILL errors (no over-suppression), and that an interface-implementing concise class has no
-  "must implement". These run headless (unlike `runIde`), giving Vim-add-on-level coverage.
-- A test that the augment provider does not recurse/duplicate.
+### A2.3 — PsiAugmentProvider (satisfy "must implement") — the real work
+- Synthesize `PsiMethod`s (via `LightMethodBuilder`) for concise methods so `implements` is
+  satisfied and duplicates are avoided.
+- **Recursion-safe** already-declared detection WITHOUT `getMethods()` (gotcha #1): inspect the
+  class's own physical declarations (AST/stub) / use recursion guards + `CachedValuesManager`,
+  dumb-aware.
+- **Extract real signatures** from the recovered PSI (gotcha #4) — the concise `PsiMethod`
+  header is intact; read name/return/params/type-params/throws.
 
-### A2.6 — Packaging & distribution
-- `plugin.xml` metadata (name, description, `since-build`, no debug EPs).
-- Build ZIP via Gradle IntelliJ Platform Plugin (already set up).
-- Distribute as a GitHub release ZIP (per decision); document install-from-disk. Marketplace
-  deferred.
-- Document `build-helper-maven-plugin` `add-source` on `generate-sources` so IntelliJ resolves
-  the preprocessed classes in the actual build.
+### A2.4 — Tests (headless regression coverage)
+- `LightJavaCodeInsightFixtureTestCase` + `checkHighlighting`: concise file has NO error
+  highlights (markers/payload/field-as-type/trailing); genuinely-broken file STILL errors
+  (no over-suppression); interface-implementing concise class has no "must implement".
+- Augment provider: no recursion, no duplicate-method errors, correct signatures.
+
+### A2.5 — Packaging & distribution
+- `plugin.xml` metadata (`since-build`, no debug/PoC EPs); build ZIP via Gradle IntelliJ
+  Platform Plugin; distribute as a GitHub release ZIP (install-from-disk; Marketplace later).
+- Document `build-helper-maven-plugin` `add-source` on `generate-sources` for symbol resolution
+  in real builds.
+
+### A2.6 — Retire the museum (optional)
+- Once A2 ships and is stable, decide whether to keep `editors/intellij-spike-museum/` as a
+  reference exhibit or delete it. Default: keep until A2 is proven in the wild, then reassess.
 
 ## Verification bar
 - Concise `->`/`=` file (incl. an interface-implementing class): coloured markers, NO false
@@ -104,8 +118,9 @@ false-positives (strategy only; no code reused).
 - Headless tests green; ZIP installs and works in a clean IDEA.
 
 ## Honest effort note
-A2.1/A2.2 are small (spike code, mostly done). **A2.3 is the real component** — recursion-safe
-detection + signature extraction from recovered PSI is non-trivial and version-sensitive.
-A2.5 (headless highlighting tests) is valuable and achievable. Overall A2 is a **real plugin
-project**, not a quick add-on — but every mechanism is now spike-proven, so it is
-build-not-research from here. Wildcard support stays deferred to Phase 3.
+Built fresh (no prototype reuse). A2.1 (annotator) and A2.2 (info-filter) are small and
+well-understood. **A2.3 (augment provider) is the real component** — recursion-safe
+already-declared detection + signature extraction from recovered PSI is non-trivial and
+version-sensitive. A2.4 (headless `checkHighlighting` tests) is valuable and achievable.
+Overall A2 is a **real plugin project**, but every mechanism is spike-proven, so it is
+**build-not-research** from here. Wildcard support stays deferred to Phase 3.
