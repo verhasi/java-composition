@@ -87,12 +87,17 @@ false-positives (strategy only; no code reused).
   PASSES. Note: silent-INFO colour itself is not headlessly assertable → colour confirmed
   manually in sandbox (museum spike).
 
-### A2.2 — HighlightInfoFilter (suppress false squiggles)
-- Implement a `HighlightInfoFilter` that suppresses, at concise constructs only:
-  parse errors on markers, field-as-type "cannot resolve", AND the trailing `;`/whitespace
-  errors (gotcha #2).
-- Matching must be recursion-safe, position-anchored, and never suppress errors in normal code
-  (enforced by tests).
+### A2.2 — HighlightInfoFilter (suppress false squiggles) ✅ DONE
+- `ConciseHighlightInfoFilter` (registered `daemon.highlightInfoFilter`): suppresses
+  error/warning highlights ONLY within a concise construct in method-body position — covers
+  marker parse errors, field-as-type "cannot resolve", and trailing `;`/whitespace errors.
+  Position-anchored (walks stray/error siblings back to a `PsiMethod`); leaves INFO/silent
+  highlights (our colouring) and all normal-code errors alone. **Does NOT call
+  `getMethods()`** (avoids the augment re-entrancy trap) — inspects local sibling structure only.
+- `ConciseHighlightInfoFilterTest` (headless): asserts a genuine syntax error in normal code
+  is STILL reported (no over-suppression) and normal code stays clean. PASSES. (Suppression of
+  the concise squiggles themselves is confirmed visually in sandbox — brittle to assert via
+  `checkHighlighting` on shifting parser errors.)
 
 ### A2.3 — PsiAugmentProvider (satisfy "must implement") — the real work
 - Synthesize `PsiMethod`s (via `LightMethodBuilder`) for concise methods so `implements` is

@@ -22,5 +22,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <!-- A2.1 — colour the concise -> / = markers in method-body position. -->
         <annotator language="JAVA" implementationClass="guru.mocker.composition.intellij.ConciseMarkerAnnotator"/>
+        <!-- A2.2 — suppress the false parse/semantic squiggles on concise bodies (Lombok-style). -->
+        <daemon.highlightInfoFilter implementation="guru.mocker.composition.intellij.ConciseHighlightInfoFilter"/>
     </extensions>
 </idea-plugin>
