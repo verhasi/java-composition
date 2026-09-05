@@ -57,9 +57,9 @@ public class ConciseHighlightInfoFilter implements HighlightInfoFilter {
 
     /**
      * True if this element is part of a concise/wildcard construct: it is a marker token,
-     * or it sits inside a PsiErrorElement whose text carries a concise marker, or its
-     * immediate siblings include a concise marker (covers the stray PsiTypeElement names
-     * like {@code store}, {@code Math} that draw "cannot resolve").
+     * or it sits inside a PsiErrorElement whose text carries a concise marker, or it is a
+     * stray type/reference node (e.g. a field name misparsed as a type, like {@code store})
+     * flanked by concise-marker error elements.
      */
     private boolean isInConciseContext(PsiElement element) {
         if (isMarkerToken(element)) {
@@ -70,11 +70,33 @@ public class ConciseHighlightInfoFilter implements HighlightInfoFilter {
         if (err != null && containsMarker(err.getText())) {
             return true;
         }
-        // Adjacent to a marker error element (stray type names sit between marker errors).
-        if (hasMarkerNeighbor(element)) {
+        // A stray name misparsed as a type/reference (e.g. the field `store` in `= store::x`).
+        // The leaf identifier's enclosing PsiTypeElement / PsiJavaCodeReferenceElement is the
+        // node that sits as a sibling between concise-marker error elements — check ITS
+        // neighbours, not the identifier's.
+        PsiElement strayTypeNode = enclosingStrayTypeNode(element);
+        if (strayTypeNode != null && hasMarkerNeighbor(strayTypeNode)) {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Walk up from a leaf to the outermost PsiTypeElement / PsiJavaCodeReferenceElement that
+     * the parser produced for a misparsed name, so we can inspect its siblings. Returns null
+     * if the element is not inside such a node.
+     */
+    private PsiElement enclosingStrayTypeNode(PsiElement element) {
+        PsiElement node = null;
+        for (PsiElement p = element; p != null; p = p.getParent()) {
+            String cls = p.getClass().getSimpleName();
+            if (cls.equals("PsiTypeElementImpl") || cls.equals("PsiJavaCodeReferenceElementImpl")) {
+                node = p; // keep climbing to the outermost such node
+            } else if (node != null) {
+                break; // climbed past the type/reference chain
+            }
+        }
+        return node;
     }
 
     private boolean isMarkerToken(PsiElement element) {

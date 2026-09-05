@@ -203,15 +203,37 @@ Sandbox observation + log (`[spike-infofilter]` = 193 suppressions, `[spike-anno
   **Run #2 change:** annotator now uses `enforcedTextAttributes` with a blatant YELLOW
   background + RED bold text to disambiguate "not applied" from "applied but same color".
 
-### Run #2 — to observe
-Re-run `runIde`. Look at a `->` / `=` marker:
-- **Yellow highlight visible?** → annotations DO paint inside error elements; the earlier
-  problem was just an invisible color. Then the real annotator picks a proper theme color.
-- **Still nothing?** → `newSilentAnnotation`/annotations do not paint inside `PsiErrorElement`
-  children; coloring the payload needs a different route (color the stray parsed nodes that
-  ARE outside the error element, or reconsider).
-Record the result and, separately, note that the semantic-name suppression matcher needs
-broadening regardless.
+### Run #2 result — DECISIVE: coloring works ✅
+
+The blatant yellow **rendered** on the `->` / `=` markers ("very ugly yellow" 😄). This proves:
+**annotations DO paint on tokens inside `PsiErrorElement`s, and the color renders.** The
+earlier "no color" was simply `OPERATION_SIGN` ≈ default foreground → invisible, NOT a
+platform limitation.
+
+**Conclusion: the lightweight A2 path is VIABLE — no custom PSI required.** All three pillars
+are now observed:
+1. ✅ Suppress parse-error squiggles — `HighlightInfoFilter` (run #1, 193 suppressions).
+2. ✅ Color the markers/payload — `Annotator` + text attributes, renders inside error
+   elements (run #2, the ugly yellow).
+3. 🔧 Suppress field-as-type "cannot resolve" — matcher now targets the stray
+   `PsiTypeElement`/`PsiJavaCodeReferenceElement` flanked by marker error elements (fix
+   applied; verify next run).
+
+**Changes applied after run #2:**
+- Annotator: yellow → `DefaultLanguageHighlighterColors.KEYWORD` (theme-aware, bold — like
+  `->` in lambdas).
+- `ConciseHighlightInfoFilter`: added `enclosingStrayTypeNode` so a field-name misparsed as a
+  type (e.g. `store`) whose enclosing type node sits beside a concise-marker error is
+  recognized and its "cannot resolve" suppressed.
+
+### Run #3 — verify the finished spike
+Re-run `runIde`, open `Sample.java`:
+- Markers `->` / `=` show the KEYWORD colour (not yellow, not invisible).
+- `store` in `= store::size` no longer red ("cannot resolve" suppressed).
+- Normal `close()`/`normal()` unaffected; introduce a real error there and confirm it STILL
+  shows (no over-suppression; check `[spike-infofilter]` logs only concise constructs).
+If clean → promote the spike to the real A2 (scope to method-body position, tidy logging,
+tests) and write the A2 build plan.
 
 ### Superseded (kept for history)
 The prior "two error sources, semantic ones unsuppressable, needs custom PSI" conclusion is
