@@ -70,13 +70,28 @@ speaks LSP through LSP4E, so the LSP proxy artifact covers it. That collapses th
   for Tree-sitter-based highlighting (Neovim/Helix/Zed).
 
 ### Task A2 — IntelliJ plugin: error suppression + highlighting
-- `HighlightErrorFilter`: suppress the `'{' expected` `PsiErrorElement` when `->`/`=`
-  immediately follows a method's `PsiParameterList`.
-- `Annotator`: color `->`/`=` as `OPERATION_SIGN`; color the RHS as a proper expression.
+**Spike complete (see `editors/intellij/SPIKE-FINDINGS.md`). Architecture proven by
+observation:**
+- Language injection: NOT viable (concise payload is in a non-host `PsiErrorElement`).
+- **`Annotator`** colours the `->`/`=` markers (`KEYWORD` attr) — renders even inside error
+  elements (proven).
+- **`HighlightInfoFilter`** (Lombok-style) suppresses the false squiggles — BOTH parse errors
+  (`Unexpected token`, `'{' expected`) AND semantic ones (`Unknown class`/`Cannot resolve` on
+  a field misparsed as a type). No over-suppression of real code (verified).
+- Scope A2 to the **per-method `->`/`=` forms** (clean). Wildcard-form highlighting is harder
+  (cascading errors corrupt surrounding structure) → deferred to Phase 3.
+
+**A2 build (promote spike → real plugin):**
+- Keep `ConciseMarkerAnnotator` (colour marker + already-parsed `->` payload); scope to
+  method-body position; remove debug logging.
+- Keep `ConciseHighlightInfoFilter`; tighten matching to method-body concise constructs;
+  remove debug logging; guard against over-suppression with tests.
+- Drop the `MultiHostInjector` (not the path).
 - Bind generated sources: document `build-helper-maven-plugin` `add-source` on
-  `generate-sources` pointing at the preprocessor output so IntelliJ resolves symbols.
-- **Verify**: concise file shows no red squiggles; markers + payload colored; project
-  resolves preprocessed classes after Maven import.
+  `generate-sources` so IntelliJ resolves preprocessed classes.
+- Package as a ZIP; distribute via GitHub (per decision). Local install-from-disk for dev.
+- **Verify**: concise `->`/`=` file shows coloured markers, no false squiggles, real errors
+  preserved; project resolves preprocessed classes after Maven import.
 
 ### Task A3 — LSP grammar injection (client-side highlighting)
 - Shared TextMate injection grammar (`injectionSelector: "L:source.java"`) matching the

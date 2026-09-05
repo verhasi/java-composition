@@ -226,14 +226,27 @@ are now observed:
   type (e.g. `store`) whose enclosing type node sits beside a concise-marker error is
   recognized and its "cannot resolve" suppressed.
 
-### Run #3 — verify the finished spike
-Re-run `runIde`, open `Sample.java`:
-- Markers `->` / `=` show the KEYWORD colour (not yellow, not invisible).
-- `store` in `= store::size` no longer red ("cannot resolve" suppressed).
-- Normal `close()`/`normal()` unaffected; introduce a real error there and confirm it STILL
-  shows (no over-suppression; check `[spike-infofilter]` logs only concise constructs).
-If clean → promote the spike to the real A2 (scope to method-body position, tidy logging,
-tests) and write the A2 build plan.
+### Run #3 result — SPIKE COMPLETE ✅ (A2 viable)
+
+- ✅ **Coloring applied** — the `->`/`=` markers render in the **keyword colour** (same as
+  `public`/`int`, i.e. not default white). `KEYWORD` works; mechanism proven.
+- ✅ **Field-as-type errors suppressed** — matcher fix caught them: log shows
+  `'Unknown class: 'store''`, `'Cannot resolve symbol 'size''`, `'Unknown class: 'delegate''`
+  now suppressed (397 total suppressions this run).
+- ✅ **No over-suppression** — safety grep for normal-code tokens (`x`, `return`, `close`,
+  `normal`, `5`) returned NOTHING; every suppression is on a concise/wildcard construct. The
+  `normal()` method stays clean.
+- ⚠️ **Wildcard forms still show some squiggles** (class/`implements` line, cascading) — the
+  spike proved squiggles CAN be eliminated (per-method is clean); full wildcard coverage is a
+  matcher-completeness matter, not a viability one, and the cascade corrupts surrounding
+  structure → deferred to Phase 3.
+
+**VERDICT (evidence-based): the lightweight A2 path is VIABLE — Annotator (colour) +
+HighlightInfoFilter (suppress), no custom PSI.** Scope A2 to the **per-method `->`/`=`
+forms** (clean, finishable). Wildcard highlighting stays with the deferred Phase 3 (where the
+cascade problem lives).
+
+Spike closed. Promote to the real A2 build.
 
 ### Superseded (kept for history)
 The prior "two error sources, semantic ones unsuppressable, needs custom PSI" conclusion is
