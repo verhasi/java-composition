@@ -34,9 +34,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ConciseHighlightInfoFilter implements HighlightInfoFilter {
 
-    private static final com.intellij.openapi.diagnostic.Logger LOG =
-            com.intellij.openapi.diagnostic.Logger.getInstance(ConciseHighlightInfoFilter.class);
-
     @Override
     public boolean accept(@NotNull HighlightInfo highlightInfo, @Nullable PsiFile file) {
         if (file == null) {
@@ -51,20 +48,7 @@ public final class ConciseHighlightInfoFilter implements HighlightInfoFilter {
         if (element == null) {
             return true;
         }
-        boolean within = isWithinConciseConstruct(element);
-        // TEMP DIAGNOSTIC (A2.2 debugging) — remove before release.
-        String cls = element.getClass().getSimpleName();
-        String parent = element.getParent() == null ? "null" : element.getParent().getClass().getSimpleName();
-        LOG.warn("[a2-filter] " + (within ? "SUPPRESS" : "KEEP   ") + " '" + highlightInfo.getDescription()
-                + "' at " + highlightInfo.getStartOffset() + " elem=" + cls + "('"
-                + safe(element.getText()) + "') parent=" + parent);
-        return !within;
-    }
-
-    private static String safe(String t) {
-        if (t == null) return "";
-        t = t.replace("\n", "\\n");
-        return t.length() > 20 ? t.substring(0, 20) + "…" : t;
+        return !isWithinConciseConstruct(element);
     }
 
     /**
