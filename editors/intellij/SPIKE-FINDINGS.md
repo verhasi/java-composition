@@ -157,6 +157,28 @@ only OUR false errors (matched by concise position) without hiding real ones; (b
 whether the marker text is actually colored once squiggles are gone. If both hold, A2 is
 viable WITHOUT the custom-PSI lift — a materially cheaper outcome than the previous conclusion.
 
+### HighlightInfoFilter spike (RUN THIS NEXT)
+`ConciseHighlightInfoFilter` (registered `<daemon.highlightInfoFilter>`) hides ERROR/WARNING
+`HighlightInfo`s whose PSI element is at/within a concise construct (marker token, inside a
+marker-bearing `PsiErrorElement`, or a stray name adjacent to a marker error). Every
+suppression is logged `[spike-infofilter] SUPPRESSING …`.
+
+**Run:** `./gradlew runIde`, open `sandbox-samples/Sample.java` and `WildcardProbe.java`.
+
+**Observe:**
+1. Do the red squiggles on the concise/wildcard lines **disappear**? (The whole point.)
+2. With squiggles gone, are the `-> = :: *` markers now **visibly colored** (the annotator's
+   `OPERATION_SIGN`)? → answers the "was color applied under the squiggle" question.
+3. **Critical safety check**: does the normal `close()` / `normal()` method still show real
+   errors if you introduce one (e.g. call an undefined method)? I.e. confirm we did NOT
+   over-suppress. Check `idea.log` `[spike-infofilter] SUPPRESSING` lines are ONLY on concise
+   constructs, never on normal code.
+
+**Record:** squiggles gone? Y/N. Markers colored? Y/N. Real errors preserved? Y/N.
+- All three good → **A2 viable without custom PSI** → build the real A2.
+- Squiggles gone but no color → color truly overridden → revisit annotator approach.
+- Over-suppresses real errors → tighten the concise-context matcher (position-based).
+
 ### Superseded (kept for history)
 The prior "two error sources, semantic ones unsuppressable, needs custom PSI" conclusion is
 superseded by the `HighlightInfoFilter` finding above. The two-error-source *observation*

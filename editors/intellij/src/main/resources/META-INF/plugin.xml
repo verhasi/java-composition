@@ -20,6 +20,8 @@
         <highlightErrorFilter implementation="guru.mocker.composition.intellij.ConciseErrorFilter"/>
         <!-- Spike: attempt to COLOR the marker tokens (incl. inside error elements). -->
         <annotator language="JAVA" implementationClass="guru.mocker.composition.intellij.ConciseMarkerAnnotator"/>
+        <!-- Spike: Lombok-style suppression of ALL false highlights (parse + semantic). -->
+        <daemon.highlightInfoFilter implementation="guru.mocker.composition.intellij.ConciseHighlightInfoFilter"/>
     </extensions>
 
     <actions>
