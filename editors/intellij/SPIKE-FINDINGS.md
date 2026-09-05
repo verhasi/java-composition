@@ -102,13 +102,43 @@ every hit noting whether the token is inside a `PsiErrorElement`.
    editor, or does the red error highlighting override them? (Screenshot.)
 
 **Record the result here:**
-- Annotator invoked on error-element children? **YES / NO**: `______`
-- Color visibly renders on the markers? **YES / NO**: `______`
-- → If both YES: `Annotator + HighlightErrorFilter` is confirmed viable → proceed to build A2.
-- → If invoked but not rendered: error highlighting wins; need another approach (e.g. also
-  suppress the error via the filter FIRST, then re-test coloring).
-- → If not invoked at all: annotators skip error-element children → A2 highlighting of the
-  payload is not achievable this way; reconsider.
+- Annotator invoked on error-element children? **YES** — 456 hits, ALL `inErrorElement=true`.
+  Confirmed: annotators DO fire on tokens nested in `PsiErrorElement`s.
+- Color visibly renders on the markers? **NO** — observed in sandbox: red error squiggles
+  ("unexpected token", "unknown class") dominate; the requested `OPERATION_SIGN` color does
+  not show. Error highlighting overrides the annotator's silent color.
+
+### Evidence-based outcome (observed, not assumed)
+
+The annotator + filter are **coupled, not independent**: coloring cannot show while the error
+highlighting is present. AND the spike surfaced a THIRD fact that reshapes A2:
+
+**There are TWO distinct red-squiggle sources, needing different (or no) handling:**
+1. **Parse errors** — `PsiErrorElement` "unexpected token". `HighlightErrorFilter` *can*
+   suppress these, but the current matcher (`'{' expected` in parent) does not match the
+   fragmented shapes (it fired only 9× and correctly declined — parent was a comment).
+   Broadening the matcher is possible.
+2. **Semantic errors** — the stray `PsiTypeElement`s (`store`, `Math`, `List`, method names)
+   are flagged **"unknown class"/"cannot resolve symbol"** by IntelliJ's inspection/annotation
+   pass. **`HighlightErrorFilter` does NOT control these** — it only governs `PsiErrorElement`
+   highlighting, not semantic "cannot resolve" annotations. These dominate the display,
+   especially for the wildcard forms, and would need a heavier/blunter mechanism
+   (`HighlightInfoFilter` / custom `HighlightVisitor`) to hide.
+
+### Honest A2 outlook (revised by evidence)
+- The clean-story "Annotator colors, HighlightErrorFilter hides the one squiggle" is **too
+  optimistic**. For the `->` form it may still be achievable (single parse error, payload
+  pre-parsed), but even there the payload references (`c`, `c.size`) may draw
+  "cannot resolve" semantic errors that `HighlightErrorFilter` won't suppress.
+- Confirming A2 viability now requires a further spike: (a) broaden `ConciseErrorFilter` to
+  suppress the concise parse errors, (b) determine whether "cannot resolve" semantic errors
+  remain on the payload, and (c) if so, evaluate `HighlightInfoFilter`. Only then is coloring
+  testable in a squiggle-free state.
+- **Decision: A2 is NOT yet proven viable.** The pretty "extend Java in the editor" path is
+  looking substantially harder than the Vim add-on. A genuinely clean solution may require
+  IntelliJ to parse the file with a real grammar (custom PSI / file type), which is a large
+  lift — the same conclusion the docs hinted at. Recommend pausing A2 after documenting this,
+  rather than sinking more effort into fighting the highlighter.
 
 ### After the annotator spike confirms viability
 1. Turn `ConciseMarkerAnnotator` into the real A2 annotator (scope to method-body position,
