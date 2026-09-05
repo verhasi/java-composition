@@ -3,6 +3,7 @@ package guru.mocker.composition.intellij;
 import com.intellij.codeInsight.daemon.impl.HighlightInfo;
 import com.intellij.codeInsight.daemon.impl.HighlightInfoFilter;
 import com.intellij.lang.annotation.HighlightSeverity;
+import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiErrorElement;
 import com.intellij.psi.PsiFile;
@@ -48,7 +49,34 @@ public final class ConciseHighlightInfoFilter implements HighlightInfoFilter {
         if (element == null) {
             return true;
         }
+        // The augment provider synthesizes a body-bearing twin of each concise method so the
+        // class satisfies `implements`. IntelliJ then sees the user's (bodyless) concise method
+        // AND the twin → a FALSE "'x()' is already defined" duplicate. Suppress it, but ONLY on
+        // a concise (bodyless concrete) method — a genuine duplicate between two real-bodied
+        // methods is left reported.
+        String description = highlightInfo.getDescription();
+        if (description != null && description.contains("is already defined")
+                && belongsToConciseMethod(element)) {
+            return false;
+        }
         return !isWithinConciseConstruct(element);
+    }
+
+    /**
+     * True if {@code element} is (within) a concise method header — a concrete,
+     * non-abstract/native, non-interface {@link PsiMethod} with no body block. Used to
+     * recognize the FALSE self-duplicate caused by the synthesized twin.
+     */
+    private boolean belongsToConciseMethod(PsiElement element) {
+        PsiMethod method = PsiTreeUtil.getParentOfType(element, PsiMethod.class, false);
+        if (method == null || method.getBody() != null) {
+            return false;
+        }
+        if (method.hasModifierProperty("abstract") || method.hasModifierProperty("native")) {
+            return false;
+        }
+        PsiClass containing = method.getContainingClass();
+        return containing == null || !containing.isInterface();
     }
 
     /**

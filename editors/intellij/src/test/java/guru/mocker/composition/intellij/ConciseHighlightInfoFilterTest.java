@@ -34,4 +34,18 @@ public class ConciseHighlightInfoFilterTest extends LightJavaCodeInsightFixtureT
                         "}\n");
         myFixture.checkHighlighting(true, false, true);
     }
+
+    /**
+     * A GENUINE duplicate — two real-bodied methods with the same signature — must STILL be
+     * reported. The "already defined" suppression applies only to concise (bodyless) methods,
+     * so this genuine one must not be hidden.
+     */
+    public void testGenuineDuplicateMethodIsNotSuppressed() {
+        myFixture.configureByText("Dup.java",
+                "class Dup {\n" +
+                        "    <error descr=\"'f()' is already defined in 'Dup'\">int f()</error> { return 1; }\n" +
+                        "    <error descr=\"'f()' is already defined in 'Dup'\">int f()</error> { return 2; }\n" +
+                        "}\n");
+        myFixture.checkHighlighting(true, false, true);
+    }
 }
