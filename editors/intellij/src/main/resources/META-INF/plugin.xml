@@ -22,6 +22,9 @@
         <annotator language="JAVA" implementationClass="guru.mocker.composition.intellij.ConciseMarkerAnnotator"/>
         <!-- Spike: Lombok-style suppression of ALL false highlights (parse + semantic). -->
         <daemon.highlightInfoFilter implementation="guru.mocker.composition.intellij.ConciseHighlightInfoFilter"/>
+        <!-- Spike: Lombok-style PSI augmentation — synthesize concise methods so the class
+             reads as implementing its interface (clears class-level 'must implement'). -->
+        <lang.psiAugmentProvider implementation="guru.mocker.composition.intellij.ConciseAugmentProvider"/>
     </extensions>
 
     <actions>
