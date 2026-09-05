@@ -85,12 +85,46 @@ public final class ConciseHighlightInfoFilter implements HighlightInfoFilter {
                 && anchoredToMethod(enclosingError)) {
             return true;
         }
-        // Cases 2 & 3: a stray node (type/ref/`;`/whitespace) adjacent to a marker error, all
-        // in method-body position. Find the top-level sibling (child of the class body) that
-        // this element belongs to, then check its neighbourhood.
+        // Cases 2 & 3: the element is part of a fragmented concise construct — a stray
+        // type/ref/modifier node, or the trailing `;`/whitespace — that the parser scattered
+        // between the method header and the terminating `;`. Find the element's top-level
+        // sibling (child of the class body) and scan backwards over the fragment's constituent
+        // nodes: if the scan crosses a concise marker (`->`/`=`) and reaches the PsiMethod, the
+        // element belongs to that concise body.
         PsiElement topLevel = topLevelSiblingOf(element);
-        if (topLevel != null && hasAdjacentMarkerError(topLevel) && anchoredToMethod(topLevel)) {
+        if (topLevel != null && isConciseFragmentTail(topLevel)) {
             return true;
+        }
+        return false;
+    }
+
+    /**
+     * Scan backwards from {@code node} over the constituent nodes of a fragmented concise
+     * construct. Returns true iff the scan crosses a concise marker (a `->`/`=` error element)
+     * AND reaches the enclosing method header ({@link PsiMethod}) — i.e. {@code node} is part
+     * of a concise method body, not unrelated code.
+     */
+    private boolean isConciseFragmentTail(PsiElement node) {
+        boolean crossedMarker = false;
+        PsiElement sib = skipWhitespace(node.getPrevSibling(), false);
+        int guard = 0;
+        while (sib != null && guard++ < 30) {
+            if (sib instanceof PsiMethod) {
+                return crossedMarker; // reached the header — concise only if a marker was crossed
+            }
+            if (sib instanceof PsiErrorElement) {
+                if (carriesMarker(sib.getText())) {
+                    crossedMarker = true;
+                }
+                sib = skipWhitespace(sib.getPrevSibling(), false);
+                continue;
+            }
+            if (isStrayFragmentNode(sib)) {
+                sib = skipWhitespace(sib.getPrevSibling(), false);
+                continue;
+            }
+            // Hit a real, non-fragment node → not part of a concise construct.
+            return false;
         }
         return false;
     }
@@ -119,16 +153,6 @@ public final class ConciseHighlightInfoFilter implements HighlightInfoFilter {
     private boolean isClassBody(PsiElement element) {
         // PsiClass holds members directly; the class body braces are tokens within PsiClass.
         return element instanceof com.intellij.psi.PsiClass;
-    }
-
-    /** True if a marker-bearing PsiErrorElement is an immediate (whitespace-skipping) neighbour. */
-    private boolean hasAdjacentMarkerError(PsiElement node) {
-        return isMarkerError(skipWhitespace(node.getPrevSibling(), false))
-                || isMarkerError(skipWhitespace(node.getNextSibling(), true));
-    }
-
-    private boolean isMarkerError(PsiElement e) {
-        return e instanceof PsiErrorElement && carriesMarker(e.getText());
     }
 
     /**
