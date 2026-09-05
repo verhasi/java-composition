@@ -17,6 +17,15 @@ Three editor concerns, each with a spike-proven mechanism:
 **Out of scope (→ Phase 3):** wildcard forms (`Map::* = store::*`) — their fragmented parse
 cascades and corrupts class structure; deferred.
 
+> **Observed scope boundary (WildcardProbe in sandbox):** opening a wildcard-only file behaves
+> correctly-but-unhelpfully — the augment provider finds NO bodyless concise `PsiMethod`
+> headers (wildcards aren't `PsiMethod`s, just fragmented error nodes), so it augments nothing,
+> and IntelliJ's standard "must implement …" errors all remain. A method declared in multiple
+> implemented interfaces (e.g. `isEmpty()` in both `Map` and `List`) is listed many times
+> (per-interface × the double-emission quirk). No crash, no recursion (log: 0 StackOverflow,
+> our classes 3× benign; the SEVEREs are platform plugin-unload/Gradle artifacts). Confirms the
+> A2 scope boundary is safe: wildcard files are simply not helped, not broken.
+
 ## Build discipline
 
 The spike was a **proof of concept**; its code is a **prototype** and is **not** the starting
