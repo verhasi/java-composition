@@ -99,18 +99,28 @@ public final class ConciseHighlightInfoFilter implements HighlightInfoFilter {
     }
 
     /**
-     * Scan backwards from {@code node} over the constituent nodes of a fragmented concise
-     * construct. Returns true iff the scan crosses a concise marker (a `->`/`=` error element)
-     * AND reaches the enclosing method header ({@link PsiMethod}) — i.e. {@code node} is part
-     * of a concise method body, not unrelated code.
+     * Scan outward from {@code node} over the constituent nodes of a fragmented concise
+     * construct. The construct spans from the method header to the terminating {@code ;}, so
+     * {@code node} belongs to it if EITHER:
+     * <ul>
+     *   <li>scanning <b>backward</b> crosses a concise marker and reaches the {@link PsiMethod}
+     *       header (covers the tail: stray names, trailing {@code ;}); or</li>
+     *   <li>scanning <b>forward</b> crosses a concise marker before any real member (covers the
+     *       whitespace/nodes that sit between the header and the marker).</li>
+     * </ul>
      */
     private boolean isConciseFragmentTail(PsiElement node) {
+        return scanReachesMarkerThenMethod(node) || scanForwardCrossesMarker(node);
+    }
+
+    /** Backward: cross a marker, reach the method header. */
+    private boolean scanReachesMarkerThenMethod(PsiElement node) {
         boolean crossedMarker = false;
         PsiElement sib = skipWhitespace(node.getPrevSibling(), false);
         int guard = 0;
         while (sib != null && guard++ < 30) {
             if (sib instanceof PsiMethod) {
-                return crossedMarker; // reached the header — concise only if a marker was crossed
+                return crossedMarker;
             }
             if (sib instanceof PsiErrorElement) {
                 if (carriesMarker(sib.getText())) {
@@ -123,7 +133,31 @@ public final class ConciseHighlightInfoFilter implements HighlightInfoFilter {
                 sib = skipWhitespace(sib.getPrevSibling(), false);
                 continue;
             }
-            // Hit a real, non-fragment node → not part of a concise construct.
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * Forward: from {@code node}, cross a concise marker before hitting a real member — but
+     * only if the node is itself immediately preceded by the method header (so we only treat
+     * the gap BETWEEN the header and its marker as concise, not arbitrary code).
+     */
+    private boolean scanForwardCrossesMarker(PsiElement node) {
+        PsiElement before = skipWhitespace(node.getPrevSibling(), false);
+        if (!(before instanceof PsiMethod)) {
+            return false;
+        }
+        PsiElement sib = skipWhitespace(node.getNextSibling(), true);
+        int guard = 0;
+        while (sib != null && guard++ < 30) {
+            if (sib instanceof PsiErrorElement && carriesMarker(sib.getText())) {
+                return true;
+            }
+            if (sib instanceof PsiErrorElement || isStrayFragmentNode(sib) || sib instanceof PsiWhiteSpace) {
+                sib = sib.getNextSibling();
+                continue;
+            }
             return false;
         }
         return false;
