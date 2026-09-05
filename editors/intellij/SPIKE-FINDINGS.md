@@ -317,13 +317,28 @@ classes.
 
 User added a concise `iterator()` too, so all referenced `List` methods are now declared
 concisely. Result:
-- ✅ **class-level "must implement" error: GONE entirely** (empty in log). IntelliJ considers
-  the class fully implemented.
+- ✅ **class-level "must implement" error: GONE** (augmentation satisfied it — verified: no
+  `must implement` in pass-through log).
 - ✅ **no duplicate errors** (skip-already-declared removed the collision).
 - ✅ screenshot shows the `@Override`/"implements method" **gutter markers** on the concise
   methods → IntelliJ recognizes them as implementations.
-- → **Hypothesis B confirmed (functionally):** with no duplicate and the interface otherwise
-  satisfied, the augmentation makes the class read as complete.
+
+⚠️ **CORRECTION — "gone entirely" was overstated.** User observed (not in the earlier log
+summary): the red underline is still *drawn*, but hovering gives the normal Javadoc popup
+(NO error) over most of it — EXCEPT a small spot at the **end** of each concise method's
+underline, which DOES give an error popup. The precise pass-through log confirms residual
+parse errors our filter did NOT catch, at the tail of each concise method:
+- `'Identifier expected'` on the trailing `';'` (e.g. (1340,1341), (1412,1413));
+- `'{' or ';' expected'` on the trailing whitespace after the body (e.g. (1202,1203),
+  (1260,1261), (1323,1324), (1394,1395)).
+
+So: class-level error truly cleared; most of the underline is a visual artifact with no
+attached error (suppressed); the ONLY real residual is a **matcher gap** — trailing `;` /
+whitespace at the end of a concise body isn't recognized as part of the concise construct by
+`isInConciseContext` (it matches marker tokens / marker-bearing error elements, not the bare
+`;`/whitespace that follows). **Fix:** extend the matcher to also suppress the
+`'Identifier expected'`/`'{' or ';' expected'` errors on the `;`/whitespace immediately
+following a concise marker construct.
 
 ⚠️ **CRITICAL BUG: re-entrancy / perf.** The provider fired **16,182 times** on one file.
 Cause: `declaresMethod` calls `psiClass.getMethods()` **from inside `getAugments()`**, which
