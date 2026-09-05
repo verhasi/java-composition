@@ -99,14 +99,23 @@ false-positives (strategy only; no code reused).
   the concise squiggles themselves is confirmed visually in sandbox — brittle to assert via
   `checkHighlighting` on shifting parser errors.)
 
-### A2.3 — PsiAugmentProvider (satisfy "must implement") — the real work
-- Synthesize `PsiMethod`s (via `LightMethodBuilder`) for concise methods so `implements` is
-  satisfied and duplicates are avoided.
-- **Recursion-safe** already-declared detection WITHOUT `getMethods()` (gotcha #1): inspect the
-  class's own physical declarations (AST/stub) / use recursion guards + `CachedValuesManager`,
-  dumb-aware.
-- **Extract real signatures** from the recovered PSI (gotcha #4) — the concise `PsiMethod`
-  header is intact; read name/return/params/type-params/throws.
+### A2.3 — PsiAugmentProvider (satisfy "must implement") ✅ DONE (core)
+- `ConciseAugmentProvider`: iterates the class's PHYSICAL children (`getChildren()`, NOT
+  `getMethods()` → recursion-safe) and, for each concrete bodyless (concise) `PsiMethod`,
+  synthesizes a body-bearing twin (`LightMethodBuilder`) copying name/return/modifiers/params
+  so the class satisfies `implements`. Navigation points to the user's concise method.
+- The synthesized twin causes a FALSE `'x() is already defined'` duplicate (user's concise
+  header + our twin); `ConciseHighlightInfoFilter` suppresses that ONLY on concise (bodyless)
+  methods — genuine duplicates between real-bodied methods remain reported (tested).
+- Tests (headless, discriminating): `FullImpl` (all methods concise) → CLEAN;
+  `PartialImpl` (one method omitted) → STILL shows "must implement value()" (no
+  over-augmentation). Both PASS.
+- **Known cosmetic quirk (accepted):** IntelliJ lists the "must implement" error TWICE on the
+  partial class (double-emission on the class-declaration range); the Implement-Methods popup
+  shows it once, correctly. Predates the augment work; not a functional issue.
+- **Remaining polish (not blocking):** signature fidelity for edge cases — generics/type
+  params, `throws`, varargs. Current twin copies name/return/modifiers/params; extend as
+  needed.
 
 ### A2.4 — Tests (headless regression coverage)
 - `LightJavaCodeInsightFixtureTestCase` + `checkHighlighting`: concise file has NO error
