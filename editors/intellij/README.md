@@ -26,17 +26,20 @@ a later phase); files using it will still show standard "must implement" errors.
 
 ## Install (from disk)
 
-1. Build the plugin ZIP:
-   ```sh
-   export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-   ./gradlew buildPlugin        # → build/distributions/*.zip
-   ```
-   (Or download a release ZIP from GitHub.)
-2. In IntelliJ: **Settings | Plugins | ⚙ | Install Plugin from Disk…** → select the ZIP.
-3. **Restart the IDE.** The plugin registers a `PsiAugmentProvider` and is not dynamically
-   unloadable, so a restart is required after install/update (IntelliJ will prompt).
+Download the ZIP from the latest [GitHub release][releases] (or build it — see below), then in
+IntelliJ: **Settings | Plugins | ⚙ | Install Plugin from Disk…** → select the ZIP → **restart**
+the IDE (the plugin registers a `PsiAugmentProvider` and is not dynamically unloadable, so a
+restart is required; IntelliJ will prompt). Requires IntelliJ IDEA 2024.3+.
 
-Compatible with IntelliJ IDEA 2024.3 (build 243) and later.
+[releases]: https://github.com/verhasi/java-composition/releases
+
+### Build the ZIP yourself
+
+```sh
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+./gradlew buildPlugin        # → build/distributions/java-composition-intellij-<version>.zip
+```
+Then install it as above.
 
 ## Make the IDE resolve the preprocessed classes
 
