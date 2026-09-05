@@ -188,12 +188,14 @@ Sandbox observation + log (`[spike-infofilter]` = 193 suppressions, `[spike-anno
   first, then the daemon pass runs our filter and removes them). 193 suppressions logged:
   `'Unexpected token'`, `'Identifier expected'`, `'{' or ';' expected`. **This is the key
   win** — error suppression via `HighlightInfoFilter` is CONFIRMED working.
-- ❌ **Semantic "cannot resolve" on the NAMES still red** — the method-ref field/method names
-  (`store`, `size`, `Math`, …) stay red. The log shows suppressions ONLY on punctuation
-  tokens, none on the stray `PsiTypeElement` names. Cause: those names are siblings BETWEEN
-  the marker error elements, and the `hasMarkerNeighbor` matcher isn't catching them.
-  **This is a matcher GAP, not a platform limit** — fixable by broadening the concise-context
-  detection to the stray type nodes flanking markers.
+- ❌ **Semantic "cannot resolve" on MISPARSED-AS-TYPE names still red** — CORRECTION: it is
+  NOT all names. The parser parses the RHS of `=` as `Type::member`, so each name becomes a
+  stray `PsiTypeElement`. A name that is coincidentally a real **class** (`Math`) resolves →
+  **no error**. A name that is actually a **field/variable** (`store`, `items`) does NOT
+  resolve as a type → **"cannot resolve symbol" error**. So only the field-as-type cases are
+  red. The log shows suppressions only on punctuation, none on these stray type nodes — a
+  matcher GAP (the field-name `PsiTypeElement`s sit between marker error elements and weren't
+  matched). Fixable by targeting stray type/reference nodes adjacent to concise markers.
 - ❌ **Markers NOT visibly colored** (`->` / `=`) — even with squiggles gone, no color showed.
   So the earlier "overridden by squiggle" hypothesis is WRONG; the color simply isn't
   visible. Two candidates: (a) `newSilentAnnotation` on tokens inside a `PsiErrorElement` may
