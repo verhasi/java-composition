@@ -24,5 +24,7 @@
         <annotator language="JAVA" implementationClass="guru.mocker.composition.intellij.ConciseMarkerAnnotator"/>
         <!-- A2.2 — suppress the false parse/semantic squiggles on concise bodies (Lombok-style). -->
         <daemon.highlightInfoFilter implementation="guru.mocker.composition.intellij.ConciseHighlightInfoFilter"/>
+        <!-- A2.3 — synthesize concise methods so a concise class satisfies `implements`. -->
+        <lang.psiAugmentProvider implementation="guru.mocker.composition.intellij.ConciseAugmentProvider"/>
     </extensions>
 </idea-plugin>
