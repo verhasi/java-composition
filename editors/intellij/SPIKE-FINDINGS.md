@@ -248,6 +248,42 @@ cascade problem lives).
 
 Spike closed. Promote to the real A2 build.
 
+### CORRECTION (ImplProbe run) — concise methods do NOT satisfy interface implementation
+
+Earlier I claimed per-method forms are "class-level clean". **Wrong** — proven by `ImplProbe`
+(a class that actually `implements List<String>` with concise `->`/`=` methods):
+
+- The class-level error **survives** (our filter logs it PASS-THROUGH):
+  `Class 'ImplProbe' must either be declared abstract or implement abstract method
+  'iterator()'/'toArray()' in 'List'`.
+- Crucially it names methods the user did NOT write; and the user-observed **"Implement
+  methods" popup lists the concise methods in NEITHER "already implemented" NOR "missing"** —
+  they are **invisible** to IntelliJ's implementation analysis.
+- So the bodyless `PsiMethod` produced by a concise form is in **limbo**: it does NOT count as
+  implementing the interface method, yet is NOT flagged "missing body" (recovery skips that
+  check). IntelliJ effectively ignores it.
+
+**Consequence:** for any class that `implements` an interface (which is the flagship use case —
+`UnmodifiableCollection implements Collection`, per requirements-phase3 / README), the
+class-level "must implement" error WILL fire, even for methods provided concisely.
+`HighlightInfoFilter` is a poor fit here: unlike the always-false local errors, this
+class-level error is *sometimes true* (user genuinely forgot a non-concise method), so blanket
+suppression would hide a real check.
+
+**Right tool: `PsiAugmentProvider`** (Lombok-style) — synthesize the concise methods as real,
+body-bearing `PsiMethod`s into the PSI so IntelliJ sees genuine implementations. Then the
+class-level error disappears CORRECTLY (fires only for truly-missing methods), the Implement-
+methods popup lists them, and they resolve for completion/navigation. Not yet built; this is
+needed for A2 to be clean on real interface-implementing classes, not just Phase-3 wildcards.
+(Unverified-but-precedented: Lombok uses exactly this to satisfy the implementation check.)
+
+### Revised A2 scope
+- Marker colouring + local-error suppression (annotator + info-filter): ✅ done, proven.
+- Interface-implementation completeness: needs a `PsiAugmentProvider` spike/build. Until then,
+  concise classes that `implements` will show a class-level "must implement" error.
+- Recommend: next spike = `PsiAugmentProvider` synthesizing one concise method → confirm the
+  class-level error clears and the method appears "implemented". THEN A2 is truly usable.
+
 ### Why this direction is de-risked (Lombok precedent — strategy only, no code)
 
 Lombok's IntelliJ plugin (Apache-2.0, now in `projectlombok/lombok`) faced the SAME class of
