@@ -68,9 +68,12 @@ false-positives (strategy only; no code reused).
 > Written fresh under a clean `editors/intellij/` (new Gradle project). The museum spike is a
 > reference for *behaviour and gotchas only* — no code is copied from it.
 
-### A2.0 — Fresh project scaffold
-- New `editors/intellij/` Gradle IntelliJ Platform Plugin project (IDEA + `com.intellij.java`),
-  clean `plugin.xml`. (The spike's Gradle setup is a known-good reference for versions.)
+### A2.0 — Fresh project scaffold ✅ DONE
+- New `editors/intellij/` Gradle IntelliJ Platform Plugin project (IDEA Community 2024.3 +
+  `com.intellij.java`), clean production `plugin.xml` (real metadata, NO extension points yet),
+  test framework wired (`testFramework(Platform)` + JUnit for `LightJavaCodeInsightFixtureTestCase`).
+  Gradle 9.4.1 / plugin 2.18.1 / JDK 21. `buildPlugin` SUCCESSFUL (empty-but-valid ZIP);
+  `compileTestJava` resolves. No prototype code copied.
 
 ### A2.1 — Annotator (marker colouring)
 - Implement an `Annotator` (language `JAVA`) that colours `->`/`=` markers with

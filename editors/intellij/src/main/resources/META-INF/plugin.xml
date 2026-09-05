@@ -1,0 +1,24 @@
+<idea-plugin>
+    <id>guru.mocker.composition.intellij</id>
+    <name>Java Composition — Concise Method Bodies</name>
+    <vendor email="composition@mocker.guru" url="https://github.com/verhasi/java-composition">mocker.guru</vendor>
+
+    <description><![CDATA[
+        Editor support for concise method bodies (JEP 8209434) in IntelliJ IDEA:
+        the <code>T m() -&gt; expr;</code> and <code>T m() = ref;</code> forms.
+        <br/>
+        Compilation is handled by the java-composition Maven preprocessor; this plugin provides
+        the live-editor experience — highlighting the concise markers, suppressing the false
+        errors IntelliJ's Java parser would otherwise report, and making concise methods count
+        as interface implementations.
+    ]]></description>
+
+    <!-- Operates on the Java PSI. -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <!-- Extension points are added incrementally by A2.1 (Annotator), A2.2 (HighlightInfoFilter),
+         and A2.3 (PsiAugmentProvider). None registered yet. -->
+    <extensions defaultExtensionNs="com.intellij">
+    </extensions>
+</idea-plugin>
