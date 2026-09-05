@@ -125,20 +125,42 @@ highlighting is present. AND the spike surfaced a THIRD fact that reshapes A2:
    especially for the wildcard forms, and would need a heavier/blunter mechanism
    (`HighlightInfoFilter` / custom `HighlightVisitor`) to hide.
 
-### Honest A2 outlook (revised by evidence)
-- The clean-story "Annotator colors, HighlightErrorFilter hides the one squiggle" is **too
-  optimistic**. For the `->` form it may still be achievable (single parse error, payload
-  pre-parsed), but even there the payload references (`c`, `c.size`) may draw
-  "cannot resolve" semantic errors that `HighlightErrorFilter` won't suppress.
-- Confirming A2 viability now requires a further spike: (a) broaden `ConciseErrorFilter` to
-  suppress the concise parse errors, (b) determine whether "cannot resolve" semantic errors
-  remain on the payload, and (c) if so, evaluate `HighlightInfoFilter`. Only then is coloring
-  testable in a squiggle-free state.
-- **Decision: A2 is NOT yet proven viable.** The pretty "extend Java in the editor" path is
-  looking substantially harder than the Vim add-on. A genuinely clean solution may require
-  IntelliJ to parse the file with a real grammar (custom PSI / file type), which is a large
-  lift — the same conclusion the docs hinted at. Recommend pausing A2 after documenting this,
-  rather than sinking more effort into fighting the highlighter.
+### Honest A2 outlook (revised AGAIN — key correction)
+
+**Earlier conclusion was wrong on the decisive point.** I claimed the semantic
+"cannot resolve" errors are not suppressible and that only custom PSI could fix it. The
+JetBrains docs (`controlling-highlighting.html`) refute this with an almost-exact analogy to
+our case:
+
+> a tool that changes Java syntax (implicitly generated setters) → IntelliJ reports the
+> usage as an unresolved symbol → suppress it with `HighlightInfoFilter`.
+
+The platform provides **`HighlightInfoFilter`** (EP `com.intellij.daemon.highlightInfoFilter`,
+single method `accept(HighlightInfo)` → return `false` to hide). Unlike `HighlightErrorFilter`
+(parse errors only), **`HighlightInfoFilter` governs ALL highlighting including semantic
+"cannot resolve" errors.** The cited real-world precedent is **`LombokHighlightErrorFilter`** —
+Lombok suppresses exactly this class of false-positive with it.
+
+Also, per `syntax-highlighting-and-error-highlighting.html`, text attributes **layer** (colors
+compose, not simply override). So in the annotator spike the marker text may in fact have been
+colored *underneath* the error squiggle — "squiggle dominates" is not the same as "no color".
+This was an imprecise reading of the spike and should be re-observed.
+
+**Revived lightweight A2 path (no custom PSI):**
+1. **Color** markers/payload — `Annotator` + `newSilentAnnotation().textAttributes()` —
+   CONFIRMED applied (456 hits).
+2. **Suppress parse squiggles** — `HighlightErrorFilter` / `syntax-errors.html`.
+3. **Suppress semantic "cannot resolve" squiggles** — `HighlightInfoFilter`, Lombok-style.
+
+**Status: PROMISING, not yet proven.** Still to spike: (a) a `HighlightInfoFilter` that hides
+only OUR false errors (matched by concise position) without hiding real ones; (b) re-observe
+whether the marker text is actually colored once squiggles are gone. If both hold, A2 is
+viable WITHOUT the custom-PSI lift — a materially cheaper outcome than the previous conclusion.
+
+### Superseded (kept for history)
+The prior "two error sources, semantic ones unsuppressable, needs custom PSI" conclusion is
+superseded by the `HighlightInfoFilter` finding above. The two-error-source *observation*
+stands; the claim that the semantic source is unsuppressable does not.
 
 ### After the annotator spike confirms viability
 1. Turn `ConciseMarkerAnnotator` into the real A2 annotator (scope to method-body position,
