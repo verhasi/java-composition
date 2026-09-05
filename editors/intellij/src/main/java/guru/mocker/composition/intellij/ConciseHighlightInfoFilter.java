@@ -52,6 +52,11 @@ public class ConciseHighlightInfoFilter implements HighlightInfoFilter {
                     + "," + highlightInfo.getEndOffset() + ") on '" + snippet(element) + "'");
             return false; // hide this false-positive
         }
+        // DIAGNOSTIC (spike): log problems we let through, so we can see class-level /
+        // missing-body errors that survive and are not yet handled.
+        LOG.warn("[spike-infofilter] PASS-THROUGH " + severity + " '"
+                + highlightInfo.getDescription() + "' at (" + highlightInfo.getStartOffset()
+                + "," + highlightInfo.getEndOffset() + ") on '" + snippet(element) + "'");
         return true; // real highlight — keep it
     }
 
